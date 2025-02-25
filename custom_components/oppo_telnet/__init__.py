@@ -1,28 +1,15 @@
 """Oppo Telnet integration for Home Assistant."""
-import voluptuous as vol
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers import config_validation as cv
-from .media_player import OppoTelnetMediaPlayer
-
 DOMAIN = "oppo_telnet"
 
-CONFIG_SCHEMA = vol.Schema({
-    DOMAIN: vol.All(
-        cv.ensure_list,
-        [vol.Schema({
-            vol.Required(CONF_HOST): cv.string,
-        })]
+async def async_setup_entry(hass, config_entry):
+    """Set up Oppo Telnet from a config entry."""
+    hass.data.setdefault(DOMAIN, {})
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(config_entry, "media_player")
     )
-}, extra=vol.ALLOW_EXTRA)
+    return True
 
-def setup(hass, config):
-    """Set up the Oppo Telnet component via YAML."""
-    if DOMAIN not in config:
-        return True
-
-    for conf in config[DOMAIN]:
-        host = conf[CONF_HOST]
-        hass.helpers.discovery.load_platform(
-            "media_player", DOMAIN, {"host": host}, config
-        )
+async def async_unload_entry(hass, config_entry):
+    """Unload Oppo Telnet config entry."""
+    await hass.config_entries.async_forward_entry_unload(config_entry, "media_player")
     return True

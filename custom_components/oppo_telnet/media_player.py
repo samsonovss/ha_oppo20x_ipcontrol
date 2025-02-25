@@ -16,7 +16,10 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the Oppo Telnet media player from a config entry."""
     host = config_entry.data[CONF_HOST]
-    async_add_entities([OppoTelnetMediaPlayer(host)])
+    player = OppoTelnetMediaPlayer(host)
+    async_add_entities([player])
+    # Запускаем цикл опроса при инициализации
+    hass.async_create_task(player.async_poll_status())
 
 class OppoTelnetMediaPlayer(MediaPlayerEntity):
     """Representation of an Oppo Telnet media player."""
@@ -28,6 +31,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._state = MediaPlayerState.OFF
         self._volume = 0.0
         self._is_muted = False
+        self._running = True  # Флаг для остановки цикла опроса
 
     @property
     def unique_id(self):
@@ -111,8 +115,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
         else:
             _LOGGER.warning(f"Failed to set volume to {new_volume}: {response}")
-        # Запрос текущей громкости для синхронизации
-        await self.async_update()
 
     async def async_media_play(self):
         """Play media."""
@@ -158,34 +160,52 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self._is_muted = mute
             self.async_write_ha_state()
 
-    async def async_update(self):
-        """Fetch the current state from the device."""
-        # Проверка питания
-        power_status = await self._send_command("#QPW", expect_response=True)
-        if power_status:
-            if "@OK ON" in power_status:
-                self._state = MediaPlayerState.IDLE if self._state == MediaPlayerState.OFF else self._state
-            elif "@OK OFF" in power_status:
-                self._state = MediaPlayerState.OFF
-
-        # Проверка громкости
-        volume_status = await self._send_command("#VOL", expect_response=True)
-        if volume_status and "@OK" in volume_status:
+    async def async_poll_status(self):
+        """Poll the device status periodically."""
+        while self._running:
             try:
-                volume = int(volume_status.split()[-1]) / 100.0
-                self._volume = volume
-            except (ValueError, IndexError):
-                _LOGGER.warning(f"Failed to parse volume: {volume_status}")
+                # Проверка питания
+                power_status = await self._send_command("#QPW", expect_response=True)
+                if power_status:
+                    if "@OK ON" in power_status:
+                        if self._state == MediaPlayerState.OFF:
+                            self._state = MediaPlayerState.IDLE
+                            self.async_write_ha_state()
+                    elif "@OK OFF" in power_status and self._state != MediaPlayerState.OFF:
+                        self._state = MediaPlayerState.OFF
+                        self.async_write_ha_state()
 
-        # Проверка состояния воспроизведения
-        play_status = await self._send_command("#QPL", expect_response=True)
-        if play_status and "@OK" in play_status:
-            status = play_status.split()[-1].lower()
-            if "play" in status:
-                self._state = MediaPlayerState.PLAYING
-            elif "pause" in status:
-                self._state = MediaPlayerState.PAUSED
-            elif "stop" in status:
-                self._state = MediaPlayerState.IDLE
+                # Проверка громкости, если включён
+                if self._state != MediaPlayerState.OFF:
+                    volume_status = await self._send_command("#VOL", expect_response=True)
+                    if volume_status and "@OK" in volume_status:
+                        try:
+                            volume = int(volume_status.split()[-1]) / 100.0
+                            if abs(volume - self._volume) > 0.01:  # Обновляем только при значимом изменении
+                                self._volume = volume
+                                self.async_write_ha_state()
+                        except (ValueError, IndexError):
+                            _LOGGER.warning(f"Failed to parse volume: {volume_status}")
 
-        self.async_write_ha_state()
+                    # Проверка состояния воспроизведения
+                    play_status = await self._send_command("#QPL", expect_response=True)
+                    if play_status and "@OK" in play_status:
+                        status = play_status.split()[-1].lower()
+                        if "play" in status and self._state != MediaPlayerState.PLAYING:
+                            self._state = MediaPlayerState.PLAYING
+                            self.async_write_ha_state()
+                        elif "pause" in status and self._state != MediaPlayerState.PAUSED:
+                            self._state = MediaPlayerState.PAUSED
+                            self.async_write_ha_state()
+                        elif "stop" in status and self._state != MediaPlayerState.IDLE:
+                            self._state = MediaPlayerState.IDLE
+                            self.async_write_ha_state()
+
+            except Exception as e:
+                _LOGGER.error(f"Error polling status: {e}")
+
+            await asyncio.sleep(5)  # Опрос каждые 5 секунд
+
+    async def async_will_remove_from_hass(self):
+        """Clean up when entity is removed."""
+        self._running = False  # Останавливаем цикл опроса

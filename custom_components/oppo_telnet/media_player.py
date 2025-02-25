@@ -88,27 +88,29 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         )
 
     async def _send_command(self, command, expect_response=False):
-        """Send a command to the Oppo device via Telnet with timeout."""
+        """Send a command to the Oppo device via Telnet."""
         try:
             reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(self._host, self._port),
-                timeout=3
+                timeout=10
             )
-            writer.write(f"{command}\r".encode())
-            await asyncio.wait_for(writer.drain(), timeout=1)
+            _LOGGER.debug(f"Sending command '{command}' to {self._host}:{self._port}")
+            writer.write(f"{command}\r\n".encode())
+            await asyncio.wait_for(writer.drain(), timeout=5)
             if expect_response:
-                response = await asyncio.wait_for(reader.read(2048), timeout=2)
-                writer.close()
-                await writer.wait_closed()
-                return response.decode().strip()
+                response = await asyncio.wait_for(reader.read(2048), timeout=5)
+                decoded_response = response.decode().strip()
+                _LOGGER.debug(f"Received response: {decoded_response}")
+                return decoded_response
             writer.close()
             await writer.wait_closed()
+            _LOGGER.debug(f"Command '{command}' sent successfully")
             return True
         except asyncio.TimeoutError:
-            _LOGGER.debug(f"Timeout sending command {command} to {self._host}")
+            _LOGGER.error(f"Timeout sending command '{command}' to {self._host}:{self._port}")
             return False
         except Exception as e:
-            _LOGGER.debug(f"Failed to send command {command}: {e}")
+            _LOGGER.error(f"Failed to send command '{command}': {e}")
             return False
 
     async def async_set_volume_level(self, volume):
@@ -118,81 +120,93 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         if response and "@OK" in response:
             self._volume = volume
             self.async_write_ha_state()
-        else:
-            _LOGGER.warning(f"Failed to set volume to {new_volume}: {response}")
 
     async def async_media_play(self):
         """Play media."""
-        if await self._send_command("#PLA"):
+        if await self._send_command("#PLA", expect_response=False):
             self._state = MediaPlayerState.PLAYING
             self.async_write_ha_state()
 
     async def async_media_stop(self):
         """Stop media."""
-        if await self._send_command("#STP"):
+        if await self._send_command("#STP", expect_response=False):
             self._state = MediaPlayerState.IDLE
             self.async_write_ha_state()
 
     async def async_media_pause(self):
         """Pause media."""
-        if await self._send_command("#PAU"):
+        if await self._send_command("#PAU", expect_response=False):
             self._state = MediaPlayerState.PAUSED
             self.async_write_ha_state()
 
     async def async_media_next_track(self):
         """Skip to next track."""
-        await self._send_command("#NXT")
+        await self._send_command("#NXT", expect_response=False)
 
     async def async_media_previous_track(self):
         """Skip to previous track."""
-        await self._send_command("#PRE")
+        await self._send_command("#PRE", expect_response=False)
 
     async def async_turn_on(self):
         """Turn the media player on."""
-        if await self._send_command("#PON"):
+        if await self._send_command("#PON", expect_response=False):
             self._state = MediaPlayerState.IDLE
-            await asyncio.sleep(1)  # Задержка для стабилизации
-            await self._update_volume()  # Считываем громкость после включения
+            await asyncio.sleep(1)
+            await self._update_volume()
             self.async_write_ha_state()
 
     async def async_turn_off(self):
         """Turn the media player off."""
-        if await self._send_command("#POF"):
+        if await self._send_command("#POF", expect_response=False):
             self._state = MediaPlayerState.OFF
             self.async_write_ha_state()
 
     async def async_mute_volume(self, mute):
         """Mute or unmute the volume."""
-        if await self._send_command("#MUT"):
+        if await self._send_command("#MUT", expect_response=False):
             self._is_muted = mute
             self.async_write_ha_state()
 
     async def _update_volume(self):
-        """Update the current volume level from the device with retry."""
-        for attempt in range(2):  # Пробуем дважды
-            volume_status = await self._send_command("#VOL", expect_response=True)
-            _LOGGER.debug(f"Volume status response (attempt {attempt + 1}): {volume_status}")
-            if volume_status and "@OK" in volume_status:
+        """Update the current volume level from the device."""
+        volume_status = await self._send_command("#VOL", expect_response=True)
+        _LOGGER.debug(f"Volume status response: {volume_status}")
+        if volume_status:
+            if "@OK" in volume_status:
                 try:
-                    # Проверяем, что последнее слово — число
-                    volume_value = volume_status.split()[-1]
-                    volume = int(volume_value) / 100.0
-                    self._volume = volume
-                    self.async_write_ha_state()
-                    return  # Успешно обновили, выходим
-                except (ValueError, IndexError):
-                    _LOGGER.warning(f"Failed to parse volume: {volume_status}")
-            await asyncio.sleep(1)  # Задержка перед повторной попыткой
+                    volume_parts = volume_status.split()
+                    for part in reversed(volume_parts):
+                        if part.isdigit():
+                            volume = int(part) / 100.0
+                            self._volume = volume
+                            _LOGGER.debug(f"Volume updated to {self._volume} from @OK")
+                            self.async_write_ha_state()
+                            break
+                except Exception as e:
+                    _LOGGER.warning(f"Failed to parse @OK volume: {volume_status}, error: {e}")
+            elif "@UVL" in volume_status:
+                try:
+                    volume_parts = volume_status.split()
+                    for part in reversed(volume_parts):
+                        if part.isdigit():
+                            volume = int(part) / 100.0
+                            self._volume = volume
+                            _LOGGER.debug(f"Volume updated to {self._volume} from @UVL")
+                            self.async_write_ha_state()
+                            break
+                except Exception as e:
+                    _LOGGER.warning(f"Failed to parse @UVL volume: {volume_status}, error: {e}")
+            else:
+                _LOGGER.warning(f"Unexpected volume response: {volume_status}")
 
     async def async_poll_status(self):
         """Poll the device status periodically."""
-        # Первый опрос для инициализации состояния и громкости
         power_status = await self._send_command("#QPW", expect_response=True)
         _LOGGER.debug(f"Initial power status response: {power_status}")
-        if power_status:
+        if power_status and "@OK" in power_status:
             if "ON" in power_status.upper():
                 self._state = MediaPlayerState.IDLE
-                await self._update_volume()  # Считываем громкость при старте
+                await self._update_volume()
                 self.async_write_ha_state()
             elif "OFF" in power_status.upper():
                 self._state = MediaPlayerState.OFF
@@ -200,28 +214,28 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
         while self._running:
             try:
-                # Проверка питания
                 power_status = await self._send_command("#QPW", expect_response=True)
                 _LOGGER.debug(f"Power status response: {power_status}")
-                if power_status:
+                if power_status and "@OK" in power_status:
                     if "ON" in power_status.upper():
-                        if self._state == MediaPlayerState.OFF:
+                        if self._state != MediaPlayerState.IDLE:
                             self._state = MediaPlayerState.IDLE
-                            await asyncio.sleep(1)  # Задержка перед запросом громкости
-                            await self._update_volume()  # Считываем громкость при включении
+                            await self._update_volume()
                             self.async_write_ha_state()
-                    elif "OFF" in power_status.upper() and self._state != MediaPlayerState.OFF:
-                        self._state = MediaPlayerState.OFF
-                        self.async_write_ha_state()
+                    elif "OFF" in power_status.upper():
+                        if self._state != MediaPlayerState.OFF:
+                            self._state = MediaPlayerState.OFF
+                            self.async_write_ha_state()
+                    else:
+                        _LOGGER.warning(f"Unexpected power status: {power_status}")
                 else:
+                    _LOGGER.warning("No response from #QPW")
                     if self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
 
-                # Проверка громкости и воспроизведения, если включён
                 if self._state != MediaPlayerState.OFF:
-                    await self._update_volume()  # Обновляем громкость периодически
-
+                    await self._update_volume()
                     play_status = await self._send_command("#QPL", expect_response=True)
                     _LOGGER.debug(f"Play status response: {play_status}")
                     if play_status and "@OK" in play_status:
@@ -242,7 +256,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                     self._state = MediaPlayerState.OFF
                     self.async_write_ha_state()
 
-            await asyncio.sleep(5)  # Опрос каждые 5 секунд
+            await asyncio.sleep(5)
 
     async def async_will_remove_from_hass(self):
         """Clean up when entity is removed."""

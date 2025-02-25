@@ -151,7 +151,8 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Turn the media player on."""
         if await self._send_command("#PON"):
             self._state = MediaPlayerState.IDLE
-            await self._update_volume()  # Считываем громкость сразу после включения
+            await asyncio.sleep(1)  # Небольшая задержка для стабилизации
+            await self._update_volume()  # Считываем громкость после включения
             self.async_write_ha_state()
 
     async def async_turn_off(self):
@@ -186,7 +187,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         if power_status:
             if "ON" in power_status.upper():
                 self._state = MediaPlayerState.IDLE
-                await self._update_volume()  # Считываем громкость при старте, если включён
+                await self._update_volume()  # Считываем громкость при старте
                 self.async_write_ha_state()
             elif "OFF" in power_status.upper():
                 self._state = MediaPlayerState.OFF
@@ -201,6 +202,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                     if "ON" in power_status.upper():
                         if self._state == MediaPlayerState.OFF:
                             self._state = MediaPlayerState.IDLE
+                            await asyncio.sleep(1)  # Задержка перед запросом громкости
                             await self._update_volume()  # Считываем громкость при включении
                             self.async_write_ha_state()
                     elif "OFF" in power_status.upper() and self._state != MediaPlayerState.OFF:

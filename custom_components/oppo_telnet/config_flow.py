@@ -20,7 +20,6 @@ class OppoTelnetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST]
             try:
-                # Проверка доступности устройства
                 await self.hass.async_add_executor_job(self._test_connection, host)
                 return self.async_create_entry(title=f"Oppo Telnet {host}", data={CONF_HOST: host})
             except Exception as e:

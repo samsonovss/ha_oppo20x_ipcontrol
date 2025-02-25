@@ -28,7 +28,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._host = host
         self._port = 23
         self._state = MediaPlayerState.OFF
-        self._volume = 0.0
+        self._volume = 0.0  # Изначально 0, обновим при первом опросе
         self._is_muted = False
         self._running = True
 
@@ -90,10 +90,9 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
     async def _send_command(self, command, expect_response=False):
         """Send a command to the Oppo device via Telnet with timeout."""
         try:
-            # Используем asyncio.wait_for для тайм-аута
             reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(self._host, self._port),
-                timeout=3  # Тайм-аут 3 секунды
+                timeout=3
             )
             writer.write(f"{command}\r".encode())
             await asyncio.wait_for(writer.drain(), timeout=1)
@@ -152,6 +151,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Turn the media player on."""
         if await self._send_command("#PON"):
             self._state = MediaPlayerState.IDLE
+            await self._update_volume()  # Считываем громкость при включении
             self.async_write_ha_state()
 
     async def async_turn_off(self):
@@ -166,8 +166,25 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self._is_muted = mute
             self.async_write_ha_state()
 
+    async def _update_volume(self):
+        """Update the current volume level from the device."""
+        volume_status = await self._send_command("#VOL", expect_response=True)
+        _LOGGER.debug(f"Volume status response: {volume_status}")
+        if volume_status and "@OK" in volume_status:
+            try:
+                volume = int(volume_status.split()[-1]) / 100.0
+                if abs(volume - self._volume) > 0.01:
+                    self._volume = volume
+                    self.async_write_ha_state()
+            except (ValueError, IndexError):
+                _LOGGER.warning(f"Failed to parse volume: {volume_status}")
+
     async def async_poll_status(self):
         """Poll the device status periodically."""
+        # Первый опрос для инициализации громкости
+        if self._state != MediaPlayerState.OFF:
+            await self._update_volume()
+
         while self._running:
             try:
                 # Проверка питания
@@ -177,30 +194,20 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                     if "ON" in power_status.upper():
                         if self._state == MediaPlayerState.OFF:
                             self._state = MediaPlayerState.IDLE
+                            await self._update_volume()  # Считываем громкость при включении
                             self.async_write_ha_state()
                     elif "OFF" in power_status.upper() and self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
                 else:
-                    # Если ответа нет, считаем выключенным
                     if self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
 
-                # Проверка громкости, если включён
+                # Проверка громкости и воспроизведения, если включён
                 if self._state != MediaPlayerState.OFF:
-                    volume_status = await self._send_command("#VOL", expect_response=True)
-                    _LOGGER.debug(f"Volume status response: {volume_status}")
-                    if volume_status and "@OK" in volume_status:
-                        try:
-                            volume = int(volume_status.split()[-1]) / 100.0
-                            if abs(volume - self._volume) > 0.01:
-                                self._volume = volume
-                                self.async_write_ha_state()
-                        except (ValueError, IndexError):
-                            _LOGGER.warning(f"Failed to parse volume: {volume_status}")
+                    await self._update_volume()  # Обновляем громкость периодически
 
-                    # Проверка состояния воспроизведения
                     play_status = await self._send_command("#QPL", expect_response=True)
                     _LOGGER.debug(f"Play status response: {play_status}")
                     if play_status and "@OK" in play_status:

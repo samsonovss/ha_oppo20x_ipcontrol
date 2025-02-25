@@ -151,7 +151,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Turn the media player on."""
         if await self._send_command("#PON"):
             self._state = MediaPlayerState.IDLE
-            await self._update_volume()  # Считываем громкость при включении
+            await self._update_volume()  # Считываем громкость сразу после включения
             self.async_write_ha_state()
 
     async def async_turn_off(self):
@@ -173,17 +173,24 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         if volume_status and "@OK" in volume_status:
             try:
                 volume = int(volume_status.split()[-1]) / 100.0
-                if abs(volume - self._volume) > 0.01:
-                    self._volume = volume
-                    self.async_write_ha_state()
+                self._volume = volume
+                self.async_write_ha_state()
             except (ValueError, IndexError):
                 _LOGGER.warning(f"Failed to parse volume: {volume_status}")
 
     async def async_poll_status(self):
         """Poll the device status periodically."""
-        # Первый опрос для инициализации громкости
-        if self._state != MediaPlayerState.OFF:
-            await self._update_volume()
+        # Первый опрос для инициализации состояния и громкости
+        power_status = await self._send_command("#QPW", expect_response=True)
+        _LOGGER.debug(f"Initial power status response: {power_status}")
+        if power_status:
+            if "ON" in power_status.upper():
+                self._state = MediaPlayerState.IDLE
+                await self._update_volume()  # Считываем громкость при старте, если включён
+                self.async_write_ha_state()
+            elif "OFF" in power_status.upper():
+                self._state = MediaPlayerState.OFF
+                self.async_write_ha_state()
 
         while self._running:
             try:

@@ -172,30 +172,18 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         volume_status = await self._send_command("#VOL", expect_response=True)
         _LOGGER.debug(f"Volume status response: {volume_status}")
         if volume_status:
-            if "@OK" in volume_status:
+            if "@OK" in volume_status or "@UVL" in volume_status:
                 try:
                     volume_parts = volume_status.split()
                     for part in reversed(volume_parts):
                         if part.isdigit():
                             volume = int(part) / 100.0
                             self._volume = volume
-                            _LOGGER.debug(f"Volume updated to {self._volume} from @OK")
+                            _LOGGER.debug(f"Volume updated to {self._volume}")
                             self.async_write_ha_state()
                             break
                 except Exception as e:
-                    _LOGGER.warning(f"Failed to parse @OK volume: {volume_status}, error: {e}")
-            elif "@UVL" in volume_status:
-                try:
-                    volume_parts = volume_status.split()
-                    for part in reversed(volume_parts):
-                        if part.isdigit():
-                            volume = int(part) / 100.0
-                            self._volume = volume
-                            _LOGGER.debug(f"Volume updated to {self._volume} from @UVL")
-                            self.async_write_ha_state()
-                            break
-                except Exception as e:
-                    _LOGGER.warning(f"Failed to parse @UVL volume: {volume_status}, error: {e}")
+                    _LOGGER.warning(f"Failed to parse volume: {volume_status}, error: {e}")
             else:
                 _LOGGER.warning(f"Unexpected volume response: {volume_status}")
 

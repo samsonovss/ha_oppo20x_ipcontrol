@@ -109,6 +109,10 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         if response and "@OK" in response:
             self._volume = volume
             self.async_write_ha_state()
+        else:
+            _LOGGER.warning(f"Failed to set volume to {new_volume}: {response}")
+        # Запрос текущей громкости для синхронизации
+        await self.async_update()
 
     async def async_media_play(self):
         """Play media."""

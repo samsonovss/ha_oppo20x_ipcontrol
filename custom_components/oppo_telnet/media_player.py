@@ -13,12 +13,24 @@ import logging
 DOMAIN = "oppo_telnet"
 _LOGGER = logging.getLogger(__name__)
 
+# Регистрация кастомного сервиса
+SERVICE_SEND_COMMAND = "send_command"
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the Oppo Telnet media player from a config entry."""
     host = config_entry.data[CONF_HOST]
     player = OppoTelnetMediaPlayer(host)
     async_add_entities([player])
     hass.async_create_task(player.async_poll_status())
+
+    # Регистрация сервиса
+    async def handle_send_command(call):
+        """Handle the send_command service."""
+        command = call.data.get("command")
+        if command:
+            await player.async_send_custom_command(command)
+    
+    hass.services.async_register(DOMAIN, SERVICE_SEND_COMMAND, handle_send_command)
 
 class OppoTelnetMediaPlayer(MediaPlayerEntity):
     """Representation of an Oppo Telnet media player."""
@@ -123,12 +135,17 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             _LOGGER.debug(f"Failed to send command {command}: {e}")
             return False
 
+    async def async_send_custom_command(self, command):
+        """Send a custom command to the Oppo device."""
+        await self._send_command(command, expect_response=False)
+        _LOGGER.debug(f"Custom command '{command}' sent")
+
     async def async_set_volume_level(self, volume):
         """Set volume level, range 0..1."""
         new_volume = int(volume * 100)
         response = await self._send_command(f"#SVL {new_volume}", expect_response=True)
         if response and "@OK" in response:
-            if abs(volume - self._volume) > 0.01:  # Проверяем, изменилась ли громкость
+            if abs(volume - self._volume) > 0.01:
                 self._volume = volume
                 _LOGGER.debug(f"Volume set to {self._volume}")
                 self.async_write_ha_state()
@@ -207,7 +224,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             try:
                 volume_parts = volume_status.split()
                 volume = int(volume_parts[-1]) / 100.0
-                if abs(volume - self._volume) > 0.01:  # Проверяем, изменилась ли громкость
+                if abs(volume - self._volume) > 0.01:
                     self._volume = volume
                     _LOGGER.debug(f"Volume updated to {self._volume}")
                     self.async_write_ha_state()

@@ -5,7 +5,7 @@
   "documentation": "https://github.com/samsonovss/oppo-telnet",
   "issue_tracker": "https://github.com/samsonovss/oppo-telnet/issues",
   "dependencies": [],
-  "codeowners": ["@ФAnton"],
+  "codeowners": ["@Anton"],
   "requirements": [],
   "iot_class": "local_push"
 }

@@ -88,19 +88,26 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         )
 
     async def _send_command(self, command, expect_response=False):
-        """Send a command to the Oppo device via Telnet."""
+        """Send a command to the Oppo device via Telnet with timeout."""
         try:
-            reader, writer = await asyncio.open_connection(self._host, self._port)
+            # Используем asyncio.wait_for для тайм-аута
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(self._host, self._port),
+                timeout=3  # Тайм-аут 3 секунды
+            )
             writer.write(f"{command}\r".encode())
-            await writer.drain()
+            await asyncio.wait_for(writer.drain(), timeout=1)
             if expect_response:
-                response = await reader.read(2048)
+                response = await asyncio.wait_for(reader.read(2048), timeout=2)
                 writer.close()
                 await writer.wait_closed()
                 return response.decode().strip()
             writer.close()
             await writer.wait_closed()
             return True
+        except asyncio.TimeoutError:
+            _LOGGER.debug(f"Timeout sending command {command} to {self._host}")
+            return False
         except Exception as e:
             _LOGGER.debug(f"Failed to send command {command}: {e}")
             return False

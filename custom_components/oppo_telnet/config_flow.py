@@ -36,12 +36,10 @@ class OppoTelnetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def _test_connection(self, host):
         """Test connection to the Oppo device."""
-        sock = socket.socket()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)  # Устанавливаем тайм-аут 5 секунд
         try:
             sock.connect((host, 23))
-            sock.send(b"#QPW\r")
-            response = sock.recv(15)
-            if b"@OK" not in response:
-                raise Exception("Unexpected response")
+            # Просто проверяем, что соединение установлено, без ожидания ответа
         finally:
             sock.close()

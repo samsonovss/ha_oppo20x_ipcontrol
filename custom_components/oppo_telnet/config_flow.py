@@ -3,8 +3,11 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST
 import socket
+import logging
 
 from . import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 class OppoTelnetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Oppo Telnet."""

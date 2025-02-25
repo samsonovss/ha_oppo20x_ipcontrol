@@ -14,7 +14,6 @@ DOMAIN = "oppo_telnet"
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the Oppo Telnet media player from a config entry."""
     host = config_entry.data[CONF_HOST]
     player = OppoTelnetMediaPlayer(host)
     async_add_entities([player])
@@ -31,6 +30,13 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._volume = 0.0
         self._is_muted = False
         self._running = True
+        self._attributes = {
+            "up": "#UPP",
+            "down": "#DWN",
+            "left": "#LFT",
+            "right": "#RGT",
+            "enter": "#ENT"
+        }
 
     @property
     def unique_id(self):
@@ -87,12 +93,17 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             model="UDP-203",
         )
 
+    @property
+    def extra_state_attributes(self):
+        """Return additional state attributes."""
+        return self._attributes
+
     async def _send_command(self, command, expect_response=False):
         """Send a command to the Oppo device via Telnet."""
         try:
             reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(self._host, self._port),
-                timeout=10
+                timeout=15
             )
             _LOGGER.debug(f"Sending command '{command}' to {self._host}:{self._port}")
             writer.write(f"{command}\r\n".encode())
@@ -167,6 +178,26 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self._is_muted = mute
             self.async_write_ha_state()
 
+    async def async_press_up(self):
+        """Press Up button."""
+        await self._send_command("#UPP", expect_response=False)
+
+    async def async_press_down(self):
+        """Press Down button."""
+        await self._send_command("#DWN", expect_response=False)
+
+    async def async_press_left(self):
+        """Press Left button."""
+        await self._send_command("#LFT", expect_response=False)
+
+    async def async_press_right(self):
+        """Press Right button."""
+        await self._send_command("#RGT", expect_response=False)
+
+    async def async_press_enter(self):
+        """Press Enter button."""
+        await self._send_command("#ENT", expect_response=False)
+
     async def _update_volume(self):
         """Update the current volume level from the device."""
         volume_status = await self._send_command("#VOL", expect_response=True)
@@ -184,9 +215,8 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                             break
                 except Exception as e:
                     _LOGGER.warning(f"Failed to parse volume: {volume_status}, error: {e}")
-            else:
-                _LOGGER.warning(f"Unexpected volume response: {volume_status}")
-                # Повторный запрос, если ответ некорректный
+            elif "ERROR" in volume_status or not volume_status.strip():
+                _LOGGER.warning("No valid volume response, retrying")
                 await asyncio.sleep(1)
                 volume_status = await self._send_command("#VOL", expect_response=True)
                 _LOGGER.debug(f"Retry volume status response: {volume_status}")
@@ -202,6 +232,8 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                                 break
                     except Exception as e:
                         _LOGGER.warning(f"Failed to parse retry volume: {volume_status}, error: {e}")
+            else:
+                _LOGGER.warning(f"Unexpected volume response: {volume_status}")
 
     async def async_poll_status(self):
         """Poll the device status periodically."""

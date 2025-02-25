@@ -92,7 +92,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             | MediaPlayerEntityFeature.TURN_OFF
             | MediaPlayerEntityFeature.NEXT_TRACK
             | MediaPlayerEntityFeature.PREVIOUS_TRACK
-            | MediaPlayerEntityFeature.VOLUME_STEP  # Добавили поддержку шага
+            | MediaPlayerEntityFeature.VOLUME_STEP
         )
 
     @property
@@ -151,23 +151,21 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     async def async_volume_up(self):
         """Increase volume by 5 steps."""
-        for _ in range(5):
-            await self._send_command("#SUP", expect_response=False)
-            await asyncio.sleep(0.1)  # Небольшая задержка между шагами
-        new_volume = min(self._volume + 0.05, 1.0)  # Увеличиваем на 0.05 (5%)
-        self._volume = new_volume
-        _LOGGER.debug(f"Volume increased to {self._volume}")
-        self.async_write_ha_state()
+        new_volume = min(self._volume + 0.05, 1.0)  # Увеличиваем на 5%
+        response = await self._send_command(f"#SVL {int(new_volume * 100)}", expect_response=True)
+        if response and "@OK" in response:
+            self._volume = new_volume
+            _LOGGER.debug(f"Volume increased to {self._volume}")
+            self.async_write_ha_state()
 
     async def async_volume_down(self):
         """Decrease volume by 5 steps."""
-        for _ in range(5):
-            await self._send_command("#SDN", expect_response=False)
-            await asyncio.sleep(0.1)  # Небольшая задержка между шагами
-        new_volume = max(self._volume - 0.05, 0.0)  # Уменьшаем на 0.05 (5%)
-        self._volume = new_volume
-        _LOGGER.debug(f"Volume decreased to {self._volume}")
-        self.async_write_ha_state()
+        new_volume = max(self._volume - 0.05, 0.0)  # Уменьшаем на 5%
+        response = await self._send_command(f"#SVL {int(new_volume * 100)}", expect_response=True)
+        if response and "@OK" in response:
+            self._volume = new_volume
+            _LOGGER.debug(f"Volume decreased to {self._volume}")
+            self.async_write_ha_state()
 
     async def async_media_play(self):
         """Play media."""
@@ -216,9 +214,10 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     async def async_select_hdmi_in(self):
-        """Select HDMI In source."""
-        if await self._send_command("#SIN"):
-            _LOGGER.debug("HDMI In selected")
+        """Select HDMI In source (placeholder, needs correct command)."""
+        # Пока используем #SRC, уточни правильную команду
+        if await self._send_command("#SRC"):
+            _LOGGER.debug("Source switched (trying HDMI In)")
             self.async_write_ha_state()
 
     async def async_press_up(self):

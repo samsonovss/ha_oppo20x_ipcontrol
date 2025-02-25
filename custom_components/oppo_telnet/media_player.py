@@ -18,7 +18,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     host = config_entry.data[CONF_HOST]
     player = OppoTelnetMediaPlayer(host)
     async_add_entities([player])
-    # Запускаем цикл опроса при инициализации
     hass.async_create_task(player.async_poll_status())
 
 class OppoTelnetMediaPlayer(MediaPlayerEntity):
@@ -31,7 +30,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._state = MediaPlayerState.OFF
         self._volume = 0.0
         self._is_muted = False
-        self._running = True  # Флаг для остановки цикла опроса
+        self._running = True
 
     @property
     def unique_id(self):
@@ -103,7 +102,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             await writer.wait_closed()
             return True
         except Exception as e:
-            _LOGGER.error(f"Failed to send command {command}: {e}")
+            _LOGGER.debug(f"Failed to send command {command}: {e}")
             return False
 
     async def async_set_volume_level(self, volume):
@@ -166,22 +165,29 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             try:
                 # Проверка питания
                 power_status = await self._send_command("#QPW", expect_response=True)
+                _LOGGER.debug(f"Power status response: {power_status}")
                 if power_status:
-                    if "@OK ON" in power_status:
+                    if "ON" in power_status.upper():
                         if self._state == MediaPlayerState.OFF:
                             self._state = MediaPlayerState.IDLE
                             self.async_write_ha_state()
-                    elif "@OK OFF" in power_status and self._state != MediaPlayerState.OFF:
+                    elif "OFF" in power_status.upper() and self._state != MediaPlayerState.OFF:
+                        self._state = MediaPlayerState.OFF
+                        self.async_write_ha_state()
+                else:
+                    # Если ответа нет, считаем выключенным
+                    if self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
 
                 # Проверка громкости, если включён
                 if self._state != MediaPlayerState.OFF:
                     volume_status = await self._send_command("#VOL", expect_response=True)
+                    _LOGGER.debug(f"Volume status response: {volume_status}")
                     if volume_status and "@OK" in volume_status:
                         try:
                             volume = int(volume_status.split()[-1]) / 100.0
-                            if abs(volume - self._volume) > 0.01:  # Обновляем только при значимом изменении
+                            if abs(volume - self._volume) > 0.01:
                                 self._volume = volume
                                 self.async_write_ha_state()
                         except (ValueError, IndexError):
@@ -189,6 +195,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
                     # Проверка состояния воспроизведения
                     play_status = await self._send_command("#QPL", expect_response=True)
+                    _LOGGER.debug(f"Play status response: {play_status}")
                     if play_status and "@OK" in play_status:
                         status = play_status.split()[-1].lower()
                         if "play" in status and self._state != MediaPlayerState.PLAYING:
@@ -203,9 +210,12 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
             except Exception as e:
                 _LOGGER.error(f"Error polling status: {e}")
+                if self._state != MediaPlayerState.OFF:
+                    self._state = MediaPlayerState.OFF
+                    self.async_write_ha_state()
 
             await asyncio.sleep(5)  # Опрос каждые 5 секунд
 
     async def async_will_remove_from_hass(self):
         """Clean up when entity is removed."""
-        self._running = False  # Останавливаем цикл опроса
+        self._running = False

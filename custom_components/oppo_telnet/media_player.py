@@ -186,6 +186,22 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                     _LOGGER.warning(f"Failed to parse volume: {volume_status}, error: {e}")
             else:
                 _LOGGER.warning(f"Unexpected volume response: {volume_status}")
+                # Повторный запрос, если ответ некорректный
+                await asyncio.sleep(1)
+                volume_status = await self._send_command("#VOL", expect_response=True)
+                _LOGGER.debug(f"Retry volume status response: {volume_status}")
+                if volume_status and ("@OK" in volume_status or "@UVL" in volume_status):
+                    try:
+                        volume_parts = volume_status.split()
+                        for part in reversed(volume_parts):
+                            if part.isdigit():
+                                volume = int(part) / 100.0
+                                self._volume = volume
+                                _LOGGER.debug(f"Volume updated to {self._volume} on retry")
+                                self.async_write_ha_state()
+                                break
+                    except Exception as e:
+                        _LOGGER.warning(f"Failed to parse retry volume: {volume_status}, error: {e}")
 
     async def async_poll_status(self):
         """Poll the device status periodically."""

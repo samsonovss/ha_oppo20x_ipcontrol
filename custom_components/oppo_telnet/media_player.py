@@ -28,7 +28,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._host = host
         self._port = 23
         self._state = MediaPlayerState.OFF
-        self._volume = 0.0  # Изначально 0, обновим при первом опросе
+        self._volume = 0.0
         self._is_muted = False
         self._running = True
 
@@ -151,7 +151,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Turn the media player on."""
         if await self._send_command("#PON"):
             self._state = MediaPlayerState.IDLE
-            await asyncio.sleep(1)  # Небольшая задержка для стабилизации
+            await asyncio.sleep(1)  # Задержка для стабилизации
             await self._update_volume()  # Считываем громкость после включения
             self.async_write_ha_state()
 
@@ -168,16 +168,21 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     async def _update_volume(self):
-        """Update the current volume level from the device."""
-        volume_status = await self._send_command("#VOL", expect_response=True)
-        _LOGGER.debug(f"Volume status response: {volume_status}")
-        if volume_status and "@OK" in volume_status:
-            try:
-                volume = int(volume_status.split()[-1]) / 100.0
-                self._volume = volume
-                self.async_write_ha_state()
-            except (ValueError, IndexError):
-                _LOGGER.warning(f"Failed to parse volume: {volume_status}")
+        """Update the current volume level from the device with retry."""
+        for attempt in range(2):  # Пробуем дважды
+            volume_status = await self._send_command("#VOL", expect_response=True)
+            _LOGGER.debug(f"Volume status response (attempt {attempt + 1}): {volume_status}")
+            if volume_status and "@OK" in volume_status:
+                try:
+                    # Проверяем, что последнее слово — число
+                    volume_value = volume_status.split()[-1]
+                    volume = int(volume_value) / 100.0
+                    self._volume = volume
+                    self.async_write_ha_state()
+                    return  # Успешно обновили, выходим
+                except (ValueError, IndexError):
+                    _LOGGER.warning(f"Failed to parse volume: {volume_status}")
+            await asyncio.sleep(1)  # Задержка перед повторной попыткой
 
     async def async_poll_status(self):
         """Poll the device status periodically."""

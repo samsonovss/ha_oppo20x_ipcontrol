@@ -46,7 +46,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             "left": "#NLT",
             "right": "#NRT",
             "enter": "#SEL",
-            "home": "#HOM"  # Добавил "домой" как бонус
+            "home": "#HOM"
         }
 
     @property
@@ -92,6 +92,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             | MediaPlayerEntityFeature.TURN_OFF
             | MediaPlayerEntityFeature.NEXT_TRACK
             | MediaPlayerEntityFeature.PREVIOUS_TRACK
+            | MediaPlayerEntityFeature.VOLUME_STEP  # Добавили поддержку шага
         )
 
     @property
@@ -148,6 +149,26 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                 _LOGGER.debug(f"Volume set to {self._volume}")
                 self.async_write_ha_state()
 
+    async def async_volume_up(self):
+        """Increase volume by 5 steps."""
+        for _ in range(5):
+            await self._send_command("#SUP", expect_response=False)
+            await asyncio.sleep(0.1)  # Небольшая задержка между шагами
+        new_volume = min(self._volume + 0.05, 1.0)  # Увеличиваем на 0.05 (5%)
+        self._volume = new_volume
+        _LOGGER.debug(f"Volume increased to {self._volume}")
+        self.async_write_ha_state()
+
+    async def async_volume_down(self):
+        """Decrease volume by 5 steps."""
+        for _ in range(5):
+            await self._send_command("#SDN", expect_response=False)
+            await asyncio.sleep(0.1)  # Небольшая задержка между шагами
+        new_volume = max(self._volume - 0.05, 0.0)  # Уменьшаем на 0.05 (5%)
+        self._volume = new_volume
+        _LOGGER.debug(f"Volume decreased to {self._volume}")
+        self.async_write_ha_state()
+
     async def async_media_play(self):
         """Play media."""
         if await self._send_command("#PLA"):
@@ -192,6 +213,12 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Mute or unmute the volume."""
         if await self._send_command("#MUT"):
             self._is_muted = mute
+            self.async_write_ha_state()
+
+    async def async_select_hdmi_in(self):
+        """Select HDMI In source."""
+        if await self._send_command("#SIN"):
+            _LOGGER.debug("HDMI In selected")
             self.async_write_ha_state()
 
     async def async_press_up(self):

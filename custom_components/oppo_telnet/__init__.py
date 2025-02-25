@@ -1,10 +1,6 @@
 """Oppo Telnet integration for Home Assistant."""
 DOMAIN = "oppo_telnet"
 
-def setup(hass, config):
-    hass.states.set("oppo_telnet.hello", "world")
-    return True
-
 async def async_setup_entry(hass, config_entry):
     """Set up Oppo Telnet from a config entry."""
     hass.async_create_task(

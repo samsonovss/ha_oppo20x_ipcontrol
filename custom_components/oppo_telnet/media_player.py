@@ -13,17 +13,14 @@ import logging
 DOMAIN = "oppo_telnet"
 _LOGGER = logging.getLogger(__name__)
 
-# Регистрация кастомного сервиса
 SERVICE_SEND_COMMAND = "send_command"
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the Oppo Telnet media player from a config entry."""
     host = config_entry.data[CONF_HOST]
     player = OppoTelnetMediaPlayer(host)
     async_add_entities([player])
     hass.async_create_task(player.async_poll_status())
 
-    # Регистрация сервиса
     async def handle_send_command(call):
         """Handle the send_command service."""
         command = call.data.get("command")
@@ -44,11 +41,12 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._is_muted = False
         self._running = True
         self._attributes = {
-            "up": "#UPP",
-            "down": "#DWN",
-            "left": "#LFT",
-            "right": "#RGT",
-            "enter": "#ENT"
+            "up": "#NUP",
+            "down": "#NDN",
+            "left": "#NLT",
+            "right": "#NRT",
+            "enter": "#SEL",
+            "home": "#HOM"  # Добавил "домой" как бонус
         }
 
     @property
@@ -198,23 +196,27 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     async def async_press_up(self):
         """Press Up button."""
-        await self._send_command("#UPP")
+        await self._send_command("#NUP")
 
     async def async_press_down(self):
         """Press Down button."""
-        await self._send_command("#DWN")
+        await self._send_command("#NDN")
 
     async def async_press_left(self):
         """Press Left button."""
-        await self._send_command("#LFT")
+        await self._send_command("#NLT")
 
     async def async_press_right(self):
         """Press Right button."""
-        await self._send_command("#RGT")
+        await self._send_command("#NRT")
 
     async def async_press_enter(self):
         """Press Enter button."""
-        await self._send_command("#ENT")
+        await self._send_command("#SEL")
+
+    async def async_press_home(self):
+        """Press Home button."""
+        await self._send_command("#HOM")
 
     async def _update_volume(self):
         """Update the current volume level from the device."""

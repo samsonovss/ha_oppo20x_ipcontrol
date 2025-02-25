@@ -1,14 +1,20 @@
 """Oppo Telnet integration for Home Assistant."""
+from homeassistant.helpers import entity_registry as er
+from .media_player import OppoTelnetMediaPlayer
+
 DOMAIN = "oppo_telnet"
 
-async def async_setup_entry(hass, config_entry):
-    """Set up Oppo Telnet from a config entry."""
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(config_entry, "media_player")
-    )
-    return True
+def setup(hass, config):
+    """Set up the Oppo Telnet component via YAML."""
+    if DOMAIN not in config:
+        return True
 
-async def async_unload_entry(hass, config_entry):
-    """Unload Oppo Telnet config entry."""
-    await hass.config_entries.async_forward_entry_unload(config_entry, "media_player")
+    for conf in config[DOMAIN]:
+        host = conf.get("host")
+        if host:
+            player = OppoTelnetMediaPlayer(host)
+            hass.data.setdefault(DOMAIN, []).append(player)
+            hass.helpers.discovery.load_platform(
+                "media_player", DOMAIN, {"host": host}, config
+            )
     return True

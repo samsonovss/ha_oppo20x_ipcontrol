@@ -174,7 +174,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         if await self._send_command("#PON"):
             self._state = MediaPlayerState.IDLE
             await asyncio.sleep(1)
-            await self._update_volume()  # Используем #QVL для начальной громкости
+            await self._update_volume()
             self.async_write_ha_state()
 
     async def async_turn_off(self):
@@ -188,8 +188,9 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     async def async_select_hdmi_in(self):
-        if await self._send_command("#SIN"):  # Используем #SIN из официальной документации
-            _LOGGER.debug("HDMI In selected")
+        # Пока используем #SRC, ждём теста порядка источников
+        if await self._send_command("#SRC"):
+            _LOGGER.debug("Source switched with #SRC (trying to reach HDMI In)")
             self.async_write_ha_state()
 
     async def async_press_up(self):
@@ -211,7 +212,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         await self._send_command("#HOM")
 
     async def _update_volume(self):
-        volume_status = await self._send_command("#QVL", expect_response=True)  # Заменили #VOL на #QVL
+        volume_status = await self._send_command("#QVL", expect_response=True)
         _LOGGER.debug(f"Volume status response: {volume_status}")
         if volume_status and ("@OK" in volume_status or "@UVL" in volume_status):
             try:

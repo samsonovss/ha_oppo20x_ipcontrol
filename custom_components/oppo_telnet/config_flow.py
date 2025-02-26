@@ -1,4 +1,7 @@
-"""Config flow for Oppo Telnet integration."""
+"""Config flow for Oppo UDP-20x Telnet integration.
+
+Handles the configuration setup for Oppo UDP-20x series media players via Telnet in Home Assistant.
+"""
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST
@@ -10,18 +13,18 @@ from . import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 class OppoTelnetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Oppo Telnet."""
+    """Handle a config flow for Oppo UDP-20x Telnet."""
 
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
-        """Handle the initial step."""
+        """Handle the initial step of Oppo UDP-20x Telnet configuration."""
         errors = {}
         if user_input is not None:
             host = user_input[CONF_HOST]
             try:
                 await self.hass.async_add_executor_job(self._test_connection, host)
-                return self.async_create_entry(title=f"Oppo Telnet {host}", data={CONF_HOST: host})
+                return self.async_create_entry(title=f"Oppo UDP-20x {host}", data={CONF_HOST: host})
             except Exception as e:
                 errors["base"] = "cannot_connect"
                 _LOGGER.error(f"Failed to connect to {host}: {e}")
@@ -35,7 +38,7 @@ class OppoTelnetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     def _test_connection(self, host):
-        """Test connection to the Oppo device."""
+        """Test Telnet connection to the Oppo UDP-20x device."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(5)  # Устанавливаем тайм-аут 5 секунд
         try:

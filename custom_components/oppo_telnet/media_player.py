@@ -14,7 +14,7 @@ from homeassistant.const import CONF_HOST
 from homeassistant.helpers.entity import DeviceInfo
 import logging
 
-DOMAIN = "oppo_telnet"  # Оставляем как есть для совместимости с HACS
+DOMAIN = "oppo_telnet"
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"
@@ -31,6 +31,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         command = call.data.get("command")
         if command == "select_hdmi_in":
             await player.async_select_hdmi_in()
+        elif command in player._attributes:
+            await player.async_send_custom_command(player._attributes[command])
         elif command:
             await player.async_send_custom_command(command)
     
@@ -46,13 +48,16 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._volume = 0.0
         self._is_muted = False
         self._running = True
+        # Атрибуты с описанием: ключ - название, значение - команда Telnet
         self._attributes = {
-            "up": "#NUP",
-            "down": "#NDN",
-            "left": "#NLT",
-            "right": "#NRT",
-            "enter": "#SEL",
-            "home": "#HOM"
+            "up": "#NUP",              # Move cursor up
+            "down": "#NDN",            # Move cursor down
+            "left": "#NLT",            # Move cursor left
+            "right": "#NRT",           # Move cursor right
+            "enter": "#SEL",           # Select/Enter
+            "home": "#HOM",            # Return to home screen
+            "source_selection": "#SRC",# Cycle through input sources
+            "select_hdmi_in": "select_hdmi_in"  # Switch to HDMI In (dual #SRC)
         }
 
     @property

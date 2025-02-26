@@ -1,6 +1,6 @@
 """Config flow for Oppo UDP-20x IP Control Protocol integration.
 
-Handles the configuration setup for Oppo UDP-20x series media players via Telnet in Home Assistant.
+Handles the configuration setup for Oppo UDP-20x series media players via IP Control Protocol in Home Assistant.
 """
 import voluptuous as vol
 from homeassistant import config_entries

@@ -1,4 +1,4 @@
-"""Oppo UDP-20x Telnet integration for Home Assistant.
+"""Oppo UDP-20x IP Control Protocol integration for Home Assistant.
 
 Custom component for controlling Oppo UDP-20x series media players (e.g., UDP-203, UDP-205) via Telnet.
 """

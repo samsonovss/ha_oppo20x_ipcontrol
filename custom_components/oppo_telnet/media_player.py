@@ -31,8 +31,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         command = call.data.get("command")
         if command == "select_hdmi_in":
             await player.async_select_hdmi_in()
-        elif command in player._attributes:
-            await player.async_send_custom_command(player._attributes[command])
+        elif command in player._command_map:
+            await player.async_send_custom_command(player._command_map[command])
         elif command:
             await player.async_send_custom_command(command)
     
@@ -48,16 +48,27 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._volume = 0.0
         self._is_muted = False
         self._running = True
-        # Атрибуты с описанием: ключ - название, значение - команда Telnet
+        # Внутренний словарь команд Telnet
+        self._command_map = {
+            "up": "#NUP",
+            "down": "#NDN",
+            "left": "#NLT",
+            "right": "#NRT",
+            "enter": "#SEL",
+            "home": "#HOM",
+            "source_selection": "#SRC",
+            "select_hdmi_in": "select_hdmi_in"  # Специальная команда
+        }
+        # Атрибуты с описаниями для отображения в HA
         self._attributes = {
-            "up": "#NUP",              # Move cursor up
-            "down": "#NDN",            # Move cursor down
-            "left": "#NLT",            # Move cursor left
-            "right": "#NRT",           # Move cursor right
-            "enter": "#SEL",           # Select/Enter
-            "home": "#HOM",            # Return to home screen
-            "source_selection": "#SRC",# Cycle through input sources
-            "select_hdmi_in": "select_hdmi_in"  # Switch to HDMI In (dual #SRC)
+            "up": "Move cursor up",
+            "down": "Move cursor down",
+            "left": "Move cursor left",
+            "right": "Move cursor right",
+            "enter": "Select/Enter",
+            "home": "Return to home screen",
+            "source_selection": "Cycle through input sources (e.g., Disc → HDMI In → ARC)",
+            "select_hdmi_in": "Triggers dual #SRC commands to switch directly to HDMI In"
         }
 
     @property
@@ -66,7 +77,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     @property
     def name(self):
-        return "Oppo UDP-20x"  # Название проигрывателя в HA
+        return "Oppo UDP-20x"
 
     @property
     def state(self):

@@ -48,6 +48,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._volume = 0.0
         self._is_muted = False
         self._running = True
+        self._current_source = None  # Текущий источник
         # Внутренний словарь команд Telnet
         self._command_map = {
             "up": "#NUP",
@@ -57,7 +58,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             "enter": "#SEL",
             "home": "#HOM",
             "source_selection": "#SRC",
-            "select_hdmi_in": "select_hdmi_in"  # Специальная команда
+            "select_hdmi_in": "select_hdmi_in"
         }
         # Атрибуты с описаниями для отображения в HA
         self._attributes = {
@@ -69,6 +70,14 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             "home": "Return to home screen",
             "source_selection": "Cycle through input sources (e.g., Disc → HDMI In → ARC)",
             "select_hdmi_in": "Triggers dual #SRC commands to switch directly to HDMI In"
+        }
+        # Список источников для выбора в карточке
+        self._source_list = ["Disc", "HDMI In", "ARC: HDMI Out"]
+        # Соответствие источников и команд #SIS
+        self._source_to_command = {
+            "Disc": "#SIS 0",
+            "HDMI In": "#SIS 1",
+            "ARC: HDMI Out": "#SIS 2"
         }
 
     @property
@@ -108,7 +117,18 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             | MediaPlayerEntityFeature.NEXT_TRACK
             | MediaPlayerEntityFeature.PREVIOUS_TRACK
             | MediaPlayerEntityFeature.VOLUME_STEP
+            | MediaPlayerEntityFeature.SELECT_SOURCE  # Добавлена поддержка выбора источника
         )
+
+    @property
+    def source(self):
+        """Return the current source."""
+        return self._current_source
+
+    @property
+    def source_list(self):
+        """Return the list of available sources."""
+        return self._source_list
 
     @property
     def device_info(self):
@@ -227,16 +247,26 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     async def async_select_hdmi_in(self):
-        """Switch Oppo UDP-20x to HDMI In source."""
-        for _ in range(2):
-            if await self._send_command("#SRC"):
-                _LOGGER.debug("Source switched with #SRC")
-                await asyncio.sleep(1)
+        """Switch Oppo UDP-20x to HDMI In source (legacy method)."""
+        if await self._send_command("#SIS 1"):
+            _LOGGER.debug("HDMI In selected with #SIS 1")
+            self._current_source = "HDMI In"  # Обновляем текущий источник
+            self.async_write_ha_state()
+        else:
+            _LOGGER.error("Failed to send #SIS 1")
+
+    async def async_select_source(self, source):
+        """Select source on Oppo UDP-20x."""
+        if source in self._source_to_command:
+            command = self._source_to_command[source]
+            if await self._send_command(command):
+                _LOGGER.debug(f"Source switched to {source} with {command}")
+                self._current_source = source
+                self.async_write_ha_state()
             else:
-                _LOGGER.error("Failed to send #SRC")
-                return
-        _LOGGER.debug("HDMI In selected")
-        self.async_write_ha_state()
+                _LOGGER.error(f"Failed to send {command} for source {source}")
+        else:
+            _LOGGER.error(f"Unknown source: {source}")
 
     async def async_press_up(self):
         """Press Up button on Oppo UDP-20x."""

@@ -44,6 +44,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._port = 23
         self._state = MediaPlayerState.OFF
         self._volume = 0.0
+        self._volume_oppo = 0  # Громкость в формате Oppo (0-100)
         self._is_muted = False
         self._running = True
         self._current_source = None
@@ -64,7 +65,8 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             "left": "Move cursor left",
             "right": "Move cursor right",
             "enter": "Select/Enter",
-            "home": "Return to home screen"
+            "home": "Return to home screen",
+            "volume_level_oppo": self._volume_oppo
         }
         # Список источников для выбора в карточке
         self._source_list = ["Disc", "HDMI In", "ARC: HDMI Out"]
@@ -142,6 +144,8 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     @property
     def extra_state_attributes(self):
+        """Return the state attributes."""
+        self._attributes["volume_level_oppo"] = self._volume_oppo
         return self._attributes
 
     async def _send_command(self, command, expect_response=False):
@@ -180,7 +184,8 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         if response and "@OK" in response:
             if abs(volume - self._volume) > 0.01:
                 self._volume = volume
-                _LOGGER.debug(f"Volume set to {self._volume}")
+                self._volume_oppo = new_volume
+                _LOGGER.debug(f"Volume set to {self._volume} (Oppo: {self._volume_oppo})")
                 self.async_write_ha_state()
 
     async def async_volume_up(self):
@@ -190,8 +195,9 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             try:
                 volume_parts = response.split()
                 if len(volume_parts) > 1 and volume_parts[1].isdigit():
-                    self._volume = int(volume_parts[1]) / 100.0
-                    _LOGGER.debug(f"Volume increased to {self._volume}")
+                    self._volume_oppo = int(volume_parts[1])
+                    self._volume = self._volume_oppo / 100.0
+                    _LOGGER.debug(f"Volume increased to {self._volume} (Oppo: {self._volume_oppo})")
                     self.async_write_ha_state()
                 else:
                     await self._update_volume()
@@ -208,8 +214,9 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             try:
                 volume_parts = response.split()
                 if len(volume_parts) > 1 and volume_parts[1].isdigit():
-                    self._volume = int(volume_parts[1]) / 100.0
-                    _LOGGER.debug(f"Volume decreased to {self._volume}")
+                    self._volume_oppo = int(volume_parts[1])
+                    self._volume = self._volume_oppo / 100.0
+                    _LOGGER.debug(f"Volume decreased to {self._volume} (Oppo: {self._volume_oppo})")
                     self.async_write_ha_state()
                 else:
                     await self._update_volume()
@@ -328,10 +335,9 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                         _LOGGER.debug("Mute status updated to True")
                     elif volume_parts[1].isdigit():
                         self._is_muted = False
-                        volume = int(volume_parts[1]) / 100.0
-                        if abs(volume - self._volume) > 0.01:
-                            self._volume = volume
-                            _LOGGER.debug(f"Volume updated to {self._volume}")
+                        self._volume_oppo = int(volume_parts[1])
+                        self._volume = self._volume_oppo / 100.0
+                        _LOGGER.debug(f"Volume updated to {self._volume} (Oppo: {self._volume_oppo})")
                     self.async_write_ha_state()
             except (ValueError, IndexError):
                 _LOGGER.warning(f"Failed to parse volume/mute status: {volume_status}")
@@ -363,7 +369,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
                 else:
-                    # Если ответа нет (например, плеер выключен из сети), считаем его выключенным
                     if self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
                         _LOGGER.debug("No response from #QPW, assuming Oppo is off")
@@ -386,7 +391,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                             self.async_write_ha_state()
 
             except Exception as e:
-                # Если возникает ошибка (например, тайм-аут из-за отключения), считаем плеер выключенным
                 _LOGGER.error(f"Error polling status: {e}")
                 if self._state != MediaPlayerState.OFF:
                     self._state = MediaPlayerState.OFF

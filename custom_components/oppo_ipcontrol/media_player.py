@@ -1,6 +1,6 @@
 """Oppo UDP-20x IP Control Protocol Media Player.
 
-Custom integration for controlling Oppo UDP-20x series (e.g., UDP-203, UDP-205) via Telnet.
+Custom integration for controlling Oppo UDP-20x series (e.g., UDP-203, UDP-205) via IP Control Protocol.
 Supports power, volume, playback, navigation, and source selection.
 """
 import asyncio
@@ -14,15 +14,15 @@ from homeassistant.const import CONF_HOST
 from homeassistant.helpers.entity import DeviceInfo
 import logging
 
-DOMAIN = "oppo_telnet"
+DOMAIN = "oppo_ipcontrol"  # Обновил DOMAIN с "oppo_telnet" на "oppo_ipcontrol"
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the Oppo UDP-20x Telnet media player from a config entry."""
+    """Set up the Oppo UDP-20x IP Control Protocol media player from a config entry."""
     host = config_entry.data[CONF_HOST]
-    player = OppoTelnetMediaPlayer(host)
+    player = OppoIPControlMediaPlayer(host)
     async_add_entities([player])
     hass.async_create_task(player.async_poll_status())
 
@@ -36,8 +36,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     
     hass.services.async_register(DOMAIN, SERVICE_SEND_COMMAND, handle_send_command)
 
-class OppoTelnetMediaPlayer(MediaPlayerEntity):
-    """Representation of an Oppo UDP-20x Telnet media player."""
+class OppoIPControlMediaPlayer(MediaPlayerEntity):
+    """Representation of an Oppo UDP-20x IP Control Protocol media player."""
 
     def __init__(self, host):
         self._host = host
@@ -49,7 +49,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._running = True
         self._current_source = None
         self._last_power_command = None
-        # Внутренний словарь команд Telnet (только навигация)
+        # Внутренний словарь команд IP Control Protocol (только навигация)
         self._command_map = {
             "up": "#NUP",
             "down": "#NDN",
@@ -85,7 +85,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     @property
     def unique_id(self):
-        return f"oppo_telnet_{self._host}"
+        return f"oppo_ipcontrol_{self._host}"
 
     @property
     def name(self):
@@ -149,7 +149,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         return self._attributes
 
     async def _send_command(self, command, expect_response=False):
-        """Send a Telnet command to the Oppo UDP-20x device."""
+        """Send an IP Control Protocol command to the Oppo UDP-20x device."""
         try:
             reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(self._host, self._port),
@@ -173,7 +173,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             return False
 
     async def async_send_custom_command(self, command):
-        """Send a custom Telnet command to the Oppo UDP-20x."""
+        """Send a custom IP Control Protocol command to the Oppo UDP-20x."""
         await self._send_command(command, expect_response=False)
         _LOGGER.debug(f"Custom command '{command}' sent")
 

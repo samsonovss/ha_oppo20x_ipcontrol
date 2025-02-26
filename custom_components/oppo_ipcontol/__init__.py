@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
 
-DOMAIN = "oppo_telnet"  # Оставляем для совместимости с HACS и структурой
+DOMAIN = "oppo_ipcontrol" 
 PLATFORMS = ["media_player"]
 
 _LOGGER = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
-# Oppo UDP-20x IP Control Protocol
+# Oppo UDP-20x IP Control
 
-Custom Home Assistant integration for controlling Oppo UDP-20x series media players (e.g., UDP-203, UDP-205) via IP Control Protocol.
+Custom Home Assistant integration for controlling Oppo UDP-20x series media players (e.g., UDP-203, UDP-205) via IP Control.
 
 ## Features
 - **Power Control**: Turn the player on or off.

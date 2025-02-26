@@ -48,8 +48,8 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._running = True
         self._current_source = None
         self._last_power_command = None
-        self._media_file = None  # Имя файла или трека
-        self._media_duration = None  # Время воспроизведения
+        self._media_file = None
+        self._media_duration = None
         # Внутренний словарь команд Telnet (только навигация)
         self._command_map = {
             "up": "#NUP",
@@ -365,33 +365,25 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                                 except (ValueError, IndexError):
                                     _LOGGER.warning(f"Failed to parse source from response: {source_status}")
                             self.async_write_ha_state()
-                        # Обновляем воспроизведение, если плеер включён
                         if self._state != MediaPlayerState.OFF:
                             await self._update_playback_info()
                     elif "OFF" in power_status.upper() and self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
                 else:
-                    if self._state != MediaPlayerState.OFF:
-                        self._state = MediaPlayerState.OFF
-                        _LOGGER.debug("No response from #QPW, assuming device is off")
-                        self.async_write_ha_state()
+                    _LOGGER.debug("No response from #QPW, keeping current state")
 
                 if self._state != MediaPlayerState.OFF:
                     await self._update_volume()
 
             except Exception as e:
                 _LOGGER.error(f"Error polling status: {e}")
-                if self._state != MediaPlayerState.OFF:
-                    self._state = MediaPlayerState.OFF
-                    _LOGGER.debug("Exception in polling, assuming device is off")
-                    self.async_write_ha_state()
+                _LOGGER.debug("Exception in polling, keeping current state")
 
             await asyncio.sleep(2)
 
     async def _update_playback_info(self):
         """Update playback information (file name and duration) from Oppo UDP-20x."""
-        # Запрос имени файла
         file_status = await self._send_command("#QFN", expect_response=True)
         if file_status and "@OK" in file_status:
             try:
@@ -405,7 +397,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         else:
             self._media_file = None
 
-        # Запрос времени воспроизведения (elapsed time)
         duration_status = await self._send_command("#QTE", expect_response=True)
         if duration_status and "@OK" in duration_status:
             try:

@@ -48,6 +48,8 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._running = True
         self._current_source = None
         self._last_power_command = None
+        self._media_file = None  # Имя файла или трека
+        self._media_duration = None  # Время воспроизведения
         # Внутренний словарь команд Telnet (только навигация)
         self._command_map = {
             "up": "#NUP",
@@ -64,7 +66,9 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             "left": "Move cursor left",
             "right": "Move cursor right",
             "enter": "Select/Enter",
-            "home": "Return to home screen"
+            "home": "Return to home screen",
+            "media_file": None,
+            "media_duration": None
         }
         # Список источников для выбора в карточке
         self._source_list = ["Disc", "HDMI In", "ARC: HDMI Out"]
@@ -142,6 +146,8 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     @property
     def extra_state_attributes(self):
+        self._attributes["media_file"] = self._media_file
+        self._attributes["media_duration"] = self._media_duration
         return self._attributes
 
     async def _send_command(self, command, expect_response=False):
@@ -359,37 +365,61 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                                 except (ValueError, IndexError):
                                     _LOGGER.warning(f"Failed to parse source from response: {source_status}")
                             self.async_write_ha_state()
+                        # Обновляем воспроизведение, если плеер включён
+                        if self._state != MediaPlayerState.OFF:
+                            await self._update_playback_info()
                     elif "OFF" in power_status.upper() and self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
                 else:
-                    if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
+                    if self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
+                        _LOGGER.debug("No response from #QPW, assuming device is off")
                         self.async_write_ha_state()
 
                 if self._state != MediaPlayerState.OFF:
                     await self._update_volume()
-                    play_status = await self._send_command("#QPL", expect_response=True)
-                    _LOGGER.debug(f"Play status response: {play_status}")
-                    if play_status and "@OK" in play_status:
-                        status = play_status.split()[-1].lower()
-                        if "play" in status and self._state != MediaPlayerState.PLAYING:
-                            self._state = MediaPlayerState.PLAYING
-                            self.async_write_ha_state()
-                        elif "pause" in status and self._state != MediaPlayerState.PAUSED:
-                            self._state = MediaPlayerState.PAUSED
-                            self.async_write_ha_state()
-                        elif "stop" in status and self._state != MediaPlayerState.IDLE:
-                            self._state = MediaPlayerState.IDLE
-                            self.async_write_ha_state()
 
             except Exception as e:
                 _LOGGER.error(f"Error polling status: {e}")
-                if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
+                if self._state != MediaPlayerState.OFF:
                     self._state = MediaPlayerState.OFF
+                    _LOGGER.debug("Exception in polling, assuming device is off")
                     self.async_write_ha_state()
 
-            await asyncio.sleep(2)  # Уменьшен интервал до 2 секунд для быстрого обновления mute
+            await asyncio.sleep(2)
+
+    async def _update_playback_info(self):
+        """Update playback information (file name and duration) from Oppo UDP-20x."""
+        # Запрос имени файла
+        file_status = await self._send_command("#QFN", expect_response=True)
+        if file_status and "@OK" in file_status:
+            try:
+                file_parts = file_status.split(" ", 1)
+                if len(file_parts) > 1:
+                    self._media_file = file_parts[1]
+                    _LOGGER.debug(f"Media file updated to {self._media_file}")
+            except (ValueError, IndexError):
+                _LOGGER.warning(f"Failed to parse media file from response: {file_status}")
+                self._media_file = None
+        else:
+            self._media_file = None
+
+        # Запрос времени воспроизведения (elapsed time)
+        duration_status = await self._send_command("#QTE", expect_response=True)
+        if duration_status and "@OK" in duration_status:
+            try:
+                duration_parts = duration_status.split(" ", 1)
+                if len(duration_parts) > 1:
+                    self._media_duration = duration_parts[1]
+                    _LOGGER.debug(f"Media duration updated to {self._media_duration}")
+            except (ValueError, IndexError):
+                _LOGGER.warning(f"Failed to parse duration from response: {duration_status}")
+                self._media_duration = None
+        else:
+            self._media_duration = None
+
+        self.async_write_ha_state()
 
     async def async_will_remove_from_hass(self):
         """Clean up when Oppo UDP-20x entity is removed."""

@@ -188,10 +188,16 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     async def async_select_hdmi_in(self):
-        # Пока используем #SRC, ждём теста порядка источников
-        if await self._send_command("#SRC"):
-            _LOGGER.debug("Source switched with #SRC (trying to reach HDMI In)")
-            self.async_write_ha_state()
+        # Переключаемся на HDMI In: дважды #SRC
+        for _ in range(2):
+            if await self._send_command("#SRC"):
+                _LOGGER.debug("Source switched with #SRC")
+                await asyncio.sleep(1)  # Задержка 1 секунда между переключениями
+            else:
+                _LOGGER.error("Failed to send #SRC")
+                return
+        _LOGGER.debug("HDMI In selected")
+        self.async_write_ha_state()
 
     async def async_press_up(self):
         await self._send_command("#NUP")

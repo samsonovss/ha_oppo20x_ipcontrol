@@ -22,7 +22,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     hass.async_create_task(player.async_poll_status())
 
     async def handle_send_command(call):
-        """Handle the send_command service."""
         command = call.data.get("command")
         if command:
             await player.async_send_custom_command(command)
@@ -175,7 +174,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         if await self._send_command("#PON"):
             self._state = MediaPlayerState.IDLE
             await asyncio.sleep(1)
-            await self._update_volume()
+            await self._update_volume()  # Используем #QVL для начальной громкости
             self.async_write_ha_state()
 
     async def async_turn_off(self):
@@ -189,7 +188,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     async def async_select_hdmi_in(self):
-        if await self._send_command("#INH"):  # Используем #INH для HDMI In
+        if await self._send_command("#SIN"):  # Используем #SIN из официальной документации
             _LOGGER.debug("HDMI In selected")
             self.async_write_ha_state()
 
@@ -212,7 +211,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         await self._send_command("#HOM")
 
     async def _update_volume(self):
-        volume_status = await self._send_command("#VOL", expect_response=True)
+        volume_status = await self._send_command("#QVL", expect_response=True)  # Заменили #VOL на #QVL
         _LOGGER.debug(f"Volume status response: {volume_status}")
         if volume_status and ("@OK" in volume_status or "@UVL" in volume_status):
             try:

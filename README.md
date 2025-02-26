@@ -6,20 +6,20 @@ Custom Home Assistant integration for controlling Oppo UDP-20x series media play
 - **Power Control**: Turn the player on/off (`#PON`, `#POF`).
 - **Volume Control**: Set volume level (0-100), increase/decrease by 5 steps, mute/unmute (`#SVL`, `#QVL`, `#MUT`).
 - **Playback**: Play, stop, pause, next/previous track (`#PLA`, `#STP`, `#PAU`, `#NXT`, `#PRE`).
-- **Navigation**: Up, Down, Left, Right, Enter, Home buttons (`#NUP`, `#NDN`, `#NLT`, `#NRT`, `#SEL`, `#HOM`).
-- **Source Selection**: Switch to HDMI In with dual `#SRC` command execution or cycle sources manually.
+- **Navigation**: Up, Down, Left, Right, Enter, Home buttons.
+- **Source Selection**: Switch to HDMI In or cycle sources manually.
 - **Status Polling**: Real-time power and playback state updates (`#QPW`, `#QPL`).
 
 ## Attributes
 The integration provides the following extra state attributes for use in automations:
-- `up`: `#NUP` - Move cursor up.
-- `down`: `#NDN` - Move cursor down.
-- `left`: `#NLT` - Move cursor left.
-- `right`: `#NRT` - Move cursor right.
-- `enter`: `#SEL` - Select/Enter.
-- `home`: `#HOM` - Return to home screen.
-- `source_selection`: `#SRC` - Cycle through input sources (e.g., Disc → HDMI In → ARC).
-- `select_hdmi_in`: Triggers dual `#SRC` commands to switch directly to HDMI In.
+- `up`: "Move cursor up"
+- `down`: "Move cursor down"
+- `left`: "Move cursor left"
+- `right`: "Move cursor right"
+- `enter`: "Select/Enter"
+- `home`: "Return to home screen"
+- `source_selection`: "Cycle through input sources (e.g., Disc → HDMI In → ARC)"
+- `select_hdmi_in`: "Triggers dual #SRC commands to switch directly to HDMI In"
 
 ## Installation
 1. **Via HACS**:

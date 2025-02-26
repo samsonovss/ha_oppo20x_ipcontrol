@@ -47,7 +47,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._is_muted = False
         self._running = True
         self._current_source = None
-        self._last_power_command = None  # Для отслеживания последней команды питания
+        self._last_power_command = None
         # Внутренний словарь команд Telnet (только навигация)
         self._command_map = {
             "up": "#NUP",
@@ -249,7 +249,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Turn on the Oppo UDP-20x."""
         if await self._send_command("#PON"):
             self._state = MediaPlayerState.IDLE
-            self._last_power_command = "on"  # Отмечаем, что включили
+            self._last_power_command = "on"
             await asyncio.sleep(1)
             await self._update_volume()
             source_status = await self._send_command("#QIS", expect_response=True)
@@ -267,7 +267,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Turn off the Oppo UDP-20x."""
         if await self._send_command("#POF"):
             self._state = MediaPlayerState.OFF
-            self._last_power_command = "off"  # Отмечаем, что выключили
+            self._last_power_command = "off"
             _LOGGER.debug("Oppo turned off with #POF")
             self.async_write_ha_state()
 
@@ -275,6 +275,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Mute or unmute the Oppo UDP-20x volume."""
         if await self._send_command("#MUT"):
             self._is_muted = mute
+            _LOGGER.debug(f"Mute set to {mute}")
             self.async_write_ha_state()
 
     async def async_select_source(self, source):
@@ -315,19 +316,25 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         await self._send_command("#HOM")
 
     async def _update_volume(self):
-        """Update the current volume level from Oppo UDP-20x."""
+        """Update the current volume level and mute status from Oppo UDP-20x."""
         volume_status = await self._send_command("#QVL", expect_response=True)
         _LOGGER.debug(f"Volume status response: {volume_status}")
-        if volume_status and ("@OK" in volume_status or "@UVL" in volume_status):
+        if volume_status and ("@OK" in volume_status):
             try:
                 volume_parts = volume_status.split()
-                volume = int(volume_parts[-1]) / 100.0
-                if abs(volume - self._volume) > 0.01:
-                    self._volume = volume
-                    _LOGGER.debug(f"Volume updated to {self._volume}")
+                if len(volume_parts) > 1:
+                    if volume_parts[1] == "MUTE":
+                        self._is_muted = True
+                        _LOGGER.debug("Mute status updated to True")
+                    elif volume_parts[1].isdigit():
+                        self._is_muted = False
+                        volume = int(volume_parts[1]) / 100.0
+                        if abs(volume - self._volume) > 0.01:
+                            self._volume = volume
+                            _LOGGER.debug(f"Volume updated to {self._volume}")
                     self.async_write_ha_state()
             except (ValueError, IndexError):
-                _LOGGER.warning(f"Failed to parse volume: {volume_status}")
+                _LOGGER.warning(f"Failed to parse volume/mute status: {volume_status}")
         else:
             _LOGGER.debug("No valid volume response, skipping update")
 
@@ -335,7 +342,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Poll the Oppo UDP-20x status periodically."""
         while self._running:
             try:
-                # Проверяем состояние питания
                 power_status = await self._send_command("#QPW", expect_response=True)
                 _LOGGER.debug(f"Power status response: {power_status}")
                 if power_status:
@@ -343,7 +349,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                         if self._state == MediaPlayerState.OFF:
                             self._state = MediaPlayerState.IDLE
                             await self._update_volume()
-                            # Запрос текущего источника при старте опроса
                             source_status = await self._send_command("#QIS", expect_response=True)
                             if source_status and "@OK" in source_status:
                                 try:
@@ -358,7 +363,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
                 else:
-                    # Если ответа нет и последняя команда была выключение, доверяем ей
                     if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
@@ -385,7 +389,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                     self._state = MediaPlayerState.OFF
                     self.async_write_ha_state()
 
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)  # Уменьшен интервал до 2 секунд для быстрого обновления mute
 
     async def async_will_remove_from_hass(self):
         """Clean up when Oppo UDP-20x entity is removed."""

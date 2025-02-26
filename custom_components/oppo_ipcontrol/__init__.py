@@ -14,17 +14,17 @@ PLATFORMS = ["media_player"]
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config: dict):
-    """Set up the Oppo UDP-20x Telnet component."""
+    """Set up the Oppo UDP-20x IP Control component."""
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Set up Oppo UDP-20x Telnet from a config entry."""
+    """Set up Oppo UDP-20x IP Control from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = entry.data
 
     async def on_hass_stop(event):
-        """Clean up when HA stops for Oppo UDP-20x Telnet."""
-        _LOGGER.debug("Home Assistant is stopping, cleaning up Oppo UDP-20x Telnet")
+        """Clean up when HA stops for Oppo UDP-20x IP Control."""
+        _LOGGER.debug("Home Assistant is stopping, cleaning up Oppo UDP-20x IP Control")
 
     entry.async_on_unload(
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)

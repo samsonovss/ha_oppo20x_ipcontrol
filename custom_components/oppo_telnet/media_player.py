@@ -30,10 +30,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     hass.services.async_register(DOMAIN, SERVICE_SEND_COMMAND, handle_send_command)
 
 class OppoTelnetMediaPlayer(MediaPlayerEntity):
-    """Representation of an Oppo Telnet media player."""
-
     def __init__(self, host):
-        """Initialize the Oppo Telnet media player."""
         self._host = host
         self._port = 23
         self._state = MediaPlayerState.OFF
@@ -51,37 +48,30 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     @property
     def unique_id(self):
-        """Return a unique ID for the device."""
         return f"oppo_telnet_{self._host}"
 
     @property
     def name(self):
-        """Return the name of the device."""
         return f"Oppo Telnet {self._host}"
 
     @property
     def state(self):
-        """Return the current state of the device."""
         return self._state
 
     @property
     def volume_level(self):
-        """Return the current volume level (0..1)."""
         return self._volume
 
     @property
     def is_volume_muted(self):
-        """Return True if volume is muted."""
         return self._is_muted
 
     @property
     def device_class(self):
-        """Return the device class."""
         return MediaPlayerDeviceClass.TV
 
     @property
     def supported_features(self):
-        """Return the supported features."""
         return (
             MediaPlayerEntityFeature.PLAY
             | MediaPlayerEntityFeature.STOP
@@ -97,7 +87,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     @property
     def device_info(self):
-        """Return device info."""
         return DeviceInfo(
             identifiers={(DOMAIN, self.unique_id)},
             name=self.name,
@@ -107,11 +96,9 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     @property
     def extra_state_attributes(self):
-        """Return additional state attributes."""
         return self._attributes
 
     async def _send_command(self, command, expect_response=False):
-        """Send a command to the Oppo device via Telnet with timeout."""
         try:
             reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(self._host, self._port),
@@ -135,12 +122,10 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             return False
 
     async def async_send_custom_command(self, command):
-        """Send a custom command to the Oppo device."""
         await self._send_command(command, expect_response=False)
         _LOGGER.debug(f"Custom command '{command}' sent")
 
     async def async_set_volume_level(self, volume):
-        """Set volume level, range 0..1."""
         new_volume = int(volume * 100)
         response = await self._send_command(f"#SVL {new_volume}", expect_response=True)
         if response and "@OK" in response:
@@ -150,8 +135,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                 self.async_write_ha_state()
 
     async def async_volume_up(self):
-        """Increase volume by 5 steps."""
-        new_volume = min(self._volume + 0.05, 1.0)  # Увеличиваем на 5%
+        new_volume = min(self._volume + 0.05, 1.0)
         response = await self._send_command(f"#SVL {int(new_volume * 100)}", expect_response=True)
         if response and "@OK" in response:
             self._volume = new_volume
@@ -159,8 +143,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     async def async_volume_down(self):
-        """Decrease volume by 5 steps."""
-        new_volume = max(self._volume - 0.05, 0.0)  # Уменьшаем на 5%
+        new_volume = max(self._volume - 0.05, 0.0)
         response = await self._send_command(f"#SVL {int(new_volume * 100)}", expect_response=True)
         if response and "@OK" in response:
             self._volume = new_volume
@@ -168,33 +151,27 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     async def async_media_play(self):
-        """Play media."""
         if await self._send_command("#PLA"):
             self._state = MediaPlayerState.PLAYING
             self.async_write_ha_state()
 
     async def async_media_stop(self):
-        """Stop media."""
         if await self._send_command("#STP"):
             self._state = MediaPlayerState.IDLE
             self.async_write_ha_state()
 
     async def async_media_pause(self):
-        """Pause media."""
         if await self._send_command("#PAU"):
             self._state = MediaPlayerState.PAUSED
             self.async_write_ha_state()
 
     async def async_media_next_track(self):
-        """Skip to next track."""
         await self._send_command("#NXT")
 
     async def async_media_previous_track(self):
-        """Skip to previous track."""
         await self._send_command("#PRE")
 
     async def async_turn_on(self):
-        """Turn the media player on."""
         if await self._send_command("#PON"):
             self._state = MediaPlayerState.IDLE
             await asyncio.sleep(1)
@@ -202,50 +179,39 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     async def async_turn_off(self):
-        """Turn the media player off."""
         if await self._send_command("#POF"):
             self._state = MediaPlayerState.OFF
             self.async_write_ha_state()
 
     async def async_mute_volume(self, mute):
-        """Mute or unmute the volume."""
         if await self._send_command("#MUT"):
             self._is_muted = mute
             self.async_write_ha_state()
 
     async def async_select_hdmi_in(self):
-        """Select HDMI In source (placeholder, needs correct command)."""
-        # Пока используем #SRC, уточни правильную команду
-        if await self._send_command("#SRC"):
-            _LOGGER.debug("Source switched (trying HDMI In)")
+        if await self._send_command("#INH"):  # Используем #INH для HDMI In
+            _LOGGER.debug("HDMI In selected")
             self.async_write_ha_state()
 
     async def async_press_up(self):
-        """Press Up button."""
         await self._send_command("#NUP")
 
     async def async_press_down(self):
-        """Press Down button."""
         await self._send_command("#NDN")
 
     async def async_press_left(self):
-        """Press Left button."""
         await self._send_command("#NLT")
 
     async def async_press_right(self):
-        """Press Right button."""
         await self._send_command("#NRT")
 
     async def async_press_enter(self):
-        """Press Enter button."""
         await self._send_command("#SEL")
 
     async def async_press_home(self):
-        """Press Home button."""
         await self._send_command("#HOM")
 
     async def _update_volume(self):
-        """Update the current volume level from the device."""
         volume_status = await self._send_command("#VOL", expect_response=True)
         _LOGGER.debug(f"Volume status response: {volume_status}")
         if volume_status and ("@OK" in volume_status or "@UVL" in volume_status):
@@ -262,7 +228,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             _LOGGER.debug("No valid volume response, skipping update")
 
     async def async_poll_status(self):
-        """Poll the device status periodically."""
         while self._running:
             try:
                 power_status = await self._send_command("#QPW", expect_response=True)
@@ -306,5 +271,4 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             await asyncio.sleep(5)
 
     async def async_will_remove_from_hass(self):
-        """Clean up when entity is removed."""
         self._running = False

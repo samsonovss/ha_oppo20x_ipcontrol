@@ -1,4 +1,4 @@
-"""Oppo UDP-20x Telnet Media Player.
+"""Oppo UDP-20x IP Control Protocol Media Player.
 
 Custom integration for controlling Oppo UDP-20x series (e.g., UDP-203, UDP-205) via Telnet.
 Supports power, volume, playback, navigation, and source selection.

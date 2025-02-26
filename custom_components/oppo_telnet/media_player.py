@@ -21,7 +21,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities([player])
     hass.async_create_task(player.async_poll_status())
 
+    # Регистрация сервиса
     async def handle_send_command(call):
+        """Handle the send_command service."""
         command = call.data.get("command")
         if command:
             await player.async_send_custom_command(command)
@@ -111,7 +113,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                 await writer.wait_closed()
                 return response.decode().strip()
             writer.close()
-                await writer.wait_closed()
+            await writer.wait_closed()
             return True
         except asyncio.TimeoutError:
             _LOGGER.debug(f"Timeout sending command {command} to {self._host}")

@@ -351,6 +351,3 @@ SetRepeatModeRandom / Случайное воспроизведение (Random)
 
 ## Notes
 - Commands prefixed with `#` are sent via Telnet (port 23) to the Oppo UDP-20x device.
-- Descriptions are based on `Oppo20XCommand.cs` from https://github.com/henrikwidlund/unfoldedcircle-oppo.
-- Some commands (e.g., `#SVL`, `#SHD`) require parameters, indicated as `<value>`.
-- Not all commands were tested in this integration; use with caution for unverified ones.

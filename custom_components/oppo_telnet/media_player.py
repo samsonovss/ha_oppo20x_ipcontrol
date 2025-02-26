@@ -111,7 +111,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                 await writer.wait_closed()
                 return response.decode().strip()
             writer.close()
-            await writer.wait_closed()
+                await writer.wait_closed()
             return True
         except asyncio.TimeoutError:
             _LOGGER.debug(f"Timeout sending command {command} to {self._host}")

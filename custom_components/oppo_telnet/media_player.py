@@ -25,7 +25,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async def handle_send_command(call):
         """Handle the send_command service."""
         command = call.data.get("command")
-        if command:
+        if command == "select_hdmi_in":  # Специальная команда для HDMI In
+            await player.async_select_hdmi_in()
+        elif command:
             await player.async_send_custom_command(command)
     
     hass.services.async_register(DOMAIN, SERVICE_SEND_COMMAND, handle_send_command)

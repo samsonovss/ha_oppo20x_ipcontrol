@@ -40,3 +40,12 @@ The integration provides the following extra state attributes for use in automat
       "entity_id": "media_player.oppo_telnet_192_168_1_124",
       "command": "select_hdmi_in"
     }
+  - Example: Move cursor up:
+    ```json
+    {
+      "entity_id": "media_player.oppo_telnet_192_168_1_124",
+      "command": "up"
+    }
+
+Commands
+A comprehensive list of Telnet commands for controlling the Oppo UDP-20x, including those used in this integration, can be found in COMMANDS.md with descriptions in English and Russian.

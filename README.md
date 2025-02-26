@@ -1,13 +1,13 @@
 # Oppo UDP-20x Telnet
 
-Custom Home Assistant integration for controlling Oppo UDP-20x series media players (e.g., UDP-203, UDP-205) via Telnet. Unlike the original UDP-based integration, this version uses Telnet protocol for reliable command execution.
+Custom Home Assistant integration for controlling Oppo UDP-20x series media players (e.g., UDP-203, UDP-205) via Telnet. Unlike the original UDP-based integration, this version uses Telnet protocol (port 23) for reliable command execution, eliminating the need for a web interface.
 
 ## Features
 - **Power Control**: Turn the player on/off (`#PON`, `#POF`).
 - **Volume Control**: Set volume level (0-100), increase/decrease by 5 steps, mute/unmute (`#SVL`, `#QVL`, `#MUT`).
 - **Playback**: Play, stop, pause, next/previous track (`#PLA`, `#STP`, `#PAU`, `#NXT`, `#PRE`).
 - **Navigation**: Up, Down, Left, Right, Enter, Home buttons (`#NUP`, `#NDN`, `#NLT`, `#NRT`, `#SEL`, `#HOM`).
-- **Source Selection**: Switch to HDMI In with automatic dual `#SRC` command execution.
+- **Source Selection**: Switch to HDMI In with dual `#SRC` command execution or cycle sources manually.
 - **Status Polling**: Real-time power and playback state updates (`#QPW`, `#QPL`).
 
 ## Attributes
@@ -18,6 +18,8 @@ The integration provides the following extra state attributes for use in automat
 - `right`: `#NRT` - Move cursor right.
 - `enter`: `#SEL` - Select/Enter.
 - `home`: `#HOM` - Return to home screen.
+- `source_selection`: `#SRC` - Cycle through input sources (e.g., Disc → HDMI In → ARC).
+- `select_hdmi_in`: Triggers dual `#SRC` commands to switch directly to HDMI In.
 
 ## Installation
 1. **Via HACS**:

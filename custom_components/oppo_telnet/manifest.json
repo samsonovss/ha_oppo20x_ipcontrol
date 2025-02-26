@@ -1,6 +1,6 @@
 {
   "domain": "oppo_telnet",
-  "name": "Oppo Telnet",
+  "name": "Oppo UDP-20x Telnet",
   "config_flow": true,
   "documentation": "https://github.com/samsonovss/oppo-telnet",
   "issue_tracker": "https://github.com/samsonovss/oppo-telnet/issues",

@@ -1,6 +1,6 @@
 # Oppo UDP-20x Telnet Commands
 
-This document lists all known Telnet commands for controlling Oppo UDP-20x series media players (e.g., UDP-203, UDP-205), sourced from community efforts and the `Oppo20XCommand.cs` file. Each command includes an English and Russian description, followed by the Telnet command itself. Commands are grouped into three categories: Basic Commands, Query Commands, and Advanced Commands.
+This document lists all known Telnet commands for controlling Oppo UDP-20x series media players (e.g., UDP-203, UDP-205). Each command includes an English and Russian description, followed by the Telnet command itself. Commands are grouped into three categories: Basic Commands, Query Commands, and Advanced Commands.
 
 ---
 

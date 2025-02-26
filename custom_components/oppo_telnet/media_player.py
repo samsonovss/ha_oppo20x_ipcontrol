@@ -73,6 +73,12 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             "HDMI In": "#SIS 1",
             "ARC: HDMI Out": "#SIS 2"
         }
+        # Соответствие ответов #QIS и источников
+        self._qis_to_source = {
+            "0": "Disc",
+            "1": "HDMI In",
+            "2": "ARC: HDMI Out"
+        }
 
     @property
     def unique_id(self):
@@ -240,15 +246,25 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     async def async_turn_on(self):
         """Turn on the Oppo UDP-20x."""
-        if await self._send_command("#POW"):
+        if await self._send_command("#PON"):
             self._state = MediaPlayerState.IDLE
             await asyncio.sleep(1)
             await self._update_volume()
+            # Запрос текущего источника при включении
+            source_status = await self._send_command("#QIS", expect_response=True)
+            if source_status and "@OK" in source_status:
+                try:
+                    source_parts = source_status.split()
+                    if len(source_parts) > 1 and source_parts[1] in self._qis_to_source:
+                        self._current_source = self._qis_to_source[source_parts[1]]
+                        _LOGGER.debug(f"Current source updated to {self._current_source}")
+                except (ValueError, IndexError):
+                    _LOGGER.warning(f"Failed to parse source from response: {source_status}")
             self.async_write_ha_state()
 
     async def async_turn_off(self):
         """Turn off the Oppo UDP-20x."""
-        if await self._send_command("#POW"):
+        if await self._send_command("#POF"):
             self._state = MediaPlayerState.OFF
             self.async_write_ha_state()
 
@@ -323,6 +339,16 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                         if self._state == MediaPlayerState.OFF:
                             self._state = MediaPlayerState.IDLE
                             await self._update_volume()
+                            # Запрос текущего источника при старте опроса
+                            source_status = await self._send_command("#QIS", expect_response=True)
+                            if source_status and "@OK" in source_status:
+                                try:
+                                    source_parts = source_status.split()
+                                    if len(source_parts) > 1 and source_parts[1] in self._qis_to_source:
+                                        self._current_source = self._qis_to_source[source_parts[1]]
+                                        _LOGGER.debug(f"Current source updated to {self._current_source}")
+                                except (ValueError, IndexError):
+                                    _LOGGER.warning(f"Failed to parse source from response: {source_status}")
                             self.async_write_ha_state()
                     elif "OFF" in power_status.upper() and self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF

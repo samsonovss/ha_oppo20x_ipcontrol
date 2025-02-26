@@ -21,7 +21,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities([player])
     hass.async_create_task(player.async_poll_status())
 
+    # Регистрация сервиса
     async def handle_send_command(call):
+        """Handle the send_command service."""
         command = call.data.get("command")
         if command:
             await player.async_send_custom_command(command)
@@ -36,23 +38,13 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._volume = 0.0
         self._is_muted = False
         self._running = True
-        self._media_title = None
-        self._media_duration = None
-        self._media_position = None
         self._attributes = {
             "up": "#NUP",
             "down": "#NDN",
             "left": "#NLT",
             "right": "#NRT",
             "enter": "#SEL",
-            "home": "#HOM",
-            "firmware_version": None,
-            "disc_type": None,
-            "input_source": None,
-            "repeat_mode": None,
-            "track_name": None,
-            "track_album": None,
-            "track_performer": None
+            "home": "#HOM"
         }
 
     @property
@@ -74,18 +66,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
     @property
     def is_volume_muted(self):
         return self._is_muted
-
-    @property
-    def media_title(self):
-        return self._media_title
-
-    @property
-    def media_duration(self):
-        return self._media_duration
-
-    @property
-    def media_position(self):
-        return self._media_position
 
     @property
     def device_class(self):
@@ -174,36 +154,29 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
     async def async_media_play(self):
         if await self._send_command("#PLA"):
             self._state = MediaPlayerState.PLAYING
-            await self._update_media_status()
             self.async_write_ha_state()
 
     async def async_media_stop(self):
         if await self._send_command("#STP"):
             self._state = MediaPlayerState.IDLE
-            await self._update_media_status()
             self.async_write_ha_state()
 
     async def async_media_pause(self):
         if await self._send_command("#PAU"):
             self._state = MediaPlayerState.PAUSED
-            await self._update_media_status()
             self.async_write_ha_state()
 
     async def async_media_next_track(self):
         await self._send_command("#NXT")
-        await self._update_media_status()
 
     async def async_media_previous_track(self):
         await self._send_command("#PRE")
-        await self._update_media_status()
 
     async def async_turn_on(self):
         if await self._send_command("#PON"):
             self._state = MediaPlayerState.IDLE
             await asyncio.sleep(1)
-            await self._send_command("#SVM 3")  # Включаем подробные обновления
             await self._update_volume()
-            await self._update_status()
             self.async_write_ha_state()
 
     async def async_turn_off(self):
@@ -217,15 +190,15 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     async def async_select_hdmi_in(self):
+        # Переключаемся на HDMI In: дважды #SRC
         for _ in range(2):
             if await self._send_command("#SRC"):
                 _LOGGER.debug("Source switched with #SRC")
-                await asyncio.sleep(1)
+                await asyncio.sleep(1)  # Задержка 1 секунда между переключениями
             else:
                 _LOGGER.error("Failed to send #SRC")
                 return
         _LOGGER.debug("HDMI In selected")
-        await self._update_status()  # Обновляем источник
         self.async_write_ha_state()
 
     async def async_press_up(self):
@@ -262,66 +235,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         else:
             _LOGGER.debug("No valid volume response, skipping update")
 
-    async def _update_media_status(self):
-        # Обновление статуса воспроизведения и медиа-информации
-        play_status = await self._send_command("#QPL", expect_response=True)
-        if play_status and "@OK" in play_status:
-            status = play_status.split()[-1].lower()
-            if status == "play":
-                self._state = MediaPlayerState.PLAYING
-            elif status == "pause":
-                self._state = MediaPlayerState.PAUSED
-            elif status == "stop":
-                self._state = MediaPlayerState.IDLE
-
-        # Название трека
-        track_name = await self._send_command("#QTN", expect_response=True)
-        if track_name and "@OK" in track_name:
-            self._media_title = " ".join(track_name.split()[1:])  # Убираем @OK
-            self._attributes["track_name"] = self._media_title
-
-        # Альбом и исполнитель
-        track_album = await self._send_command("#QTA", expect_response=True)
-        if track_album and "@OK" in track_album:
-            self._attributes["track_album"] = " ".join(track_album.split()[1:])
-        track_performer = await self._send_command("#QTP", expect_response=True)
-        if track_performer and "@OK" in track_performer:
-            self._attributes["track_performer"] = " ".join(track_performer.split()[1:])
-
-        # Длительность и позиция
-        duration = await self._send_command("#QTR", expect_response=True)  # Remaining time
-        position = await self._send_command("#QTE", expect_response=True)  # Elapsed time
-        if duration and "@OK" in duration:
-            try:
-                time_parts = duration.split()[1].split(":")
-                self._media_duration = int(time_parts[0]) * 3600 + int(time_parts[1]) * 60 + int(time_parts[2])
-            except (IndexError, ValueError):
-                _LOGGER.warning(f"Failed to parse duration: {duration}")
-        if position and "@OK" in position:
-            try:
-                time_parts = position.split()[1].split(":")
-                self._media_position = int(time_parts[0]) * 3600 + int(time_parts[1]) * 60 + int(time_parts[2])
-            except (IndexError, ValueError):
-                _LOGGER.warning(f"Failed to parse position: {position}")
-
-    async def _update_status(self):
-        # Обновление дополнительных атрибутов
-        firmware = await self._send_command("#QVR", expect_response=True)
-        if firmware and "@OK" in firmware:
-            self._attributes["firmware_version"] = " ".join(firmware.split()[1:])
-
-        disc_type = await self._send_command("#QDT", expect_response=True)
-        if disc_type and "@OK" in disc_type:
-            self._attributes["disc_type"] = " ".join(disc_type.split()[1:])
-
-        input_source = await self._send_command("#QIS", expect_response=True)
-        if input_source and "@OK" in input_source:
-            self._attributes["input_source"] = " ".join(input_source.split()[1:])
-
-        repeat_mode = await self._send_command("#QRP", expect_response=True)
-        if repeat_mode and "@OK" in repeat_mode:
-            self._attributes["repeat_mode"] = " ".join(repeat_mode.split()[1:])
-
     async def async_poll_status(self):
         while self._running:
             try:
@@ -332,7 +245,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                         if self._state == MediaPlayerState.OFF:
                             self._state = MediaPlayerState.IDLE
                             await self._update_volume()
-                            await self._update_status()
                             self.async_write_ha_state()
                     elif "OFF" in power_status.upper() and self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
@@ -344,9 +256,19 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
                 if self._state != MediaPlayerState.OFF:
                     await self._update_volume()
-                    await self._update_media_status()
-                    await self._update_status()
-                    self.async_write_ha_state()
+                    play_status = await self._send_command("#QPL", expect_response=True)
+                    _LOGGER.debug(f"Play status response: {play_status}")
+                    if play_status and "@OK" in play_status:
+                        status = play_status.split()[-1].lower()
+                        if "play" in status and self._state != MediaPlayerState.PLAYING:
+                            self._state = MediaPlayerState.PLAYING
+                            self.async_write_ha_state()
+                        elif "pause" in status and self._state != MediaPlayerState.PAUSED:
+                            self._state = MediaPlayerState.PAUSED
+                            self.async_write_ha_state()
+                        elif "stop" in status and self._state != MediaPlayerState.IDLE:
+                            self._state = MediaPlayerState.IDLE
+                            self.async_write_ha_state()
 
             except Exception as e:
                 _LOGGER.error(f"Error polling status: {e}")

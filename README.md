@@ -28,21 +28,21 @@ Additional attributes displayed in the card:
 ## Installation
 1. **Via HACS**:
    - Add this repository as a custom repository in HACS.
-   - Install "Oppo UDP-20x Telnet".
+   - Install "Oppo UDP-20x IP Control".
 2. **Manual Installation**:
-   - Copy the `oppo_telnet` folder to `/config/custom_components/`.
+   - Copy the `oppo_ipcontrol` folder to `/config/custom_components/`.
 3. **Add Integration**:
    - Go to "Settings" → "Devices & Services" → "Add Integration".
-   - Search for "Oppo UDP-20x Telnet" and configure with your device's IP (e.g., `192.168.1.124`).
+   - Search for "Oppo UDP-20x IP Control" and configure with your device's IP (e.g., `192.168.1.124`).
 4. **Restart Home Assistant**.
 
 ## Usage
 - **Media Player Card**: Control power, volume, playback, and select input sources (Disc, HDMI In, ARC: HDMI Out) directly from the card.
-- **Service Calls**: Use the `oppo_telnet.send_command` service to send navigation commands.
+- **Service Calls**: Use the `oppo_ipcontrol.send_command` service to send navigation commands.
   - Example: Move cursor up:
     ```json
     {
-      "entity_id": "media_player.oppo_telnet_192_168_1_124",
+      "entity_id": "media_player.oppo_ipcontrol_192_168_1_124",
       "command": "up"
     }
 

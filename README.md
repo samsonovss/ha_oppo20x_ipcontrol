@@ -47,5 +47,5 @@ The integration provides the following extra state attributes for use in automat
       "command": "up"
     }
 
-Commands
+## Commands
 A comprehensive list of Telnet commands for controlling the Oppo UDP-20x, including those used in this integration, can be found in COMMANDS.md with descriptions in English and Russian.

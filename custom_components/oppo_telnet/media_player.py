@@ -1,7 +1,7 @@
 """Oppo UDP-20x Telnet Media Player.
 
 Custom integration for controlling Oppo UDP-20x series (e.g., UDP-203, UDP-205) via Telnet.
-Supports power, volume, playback, navigation, and source selection (e.g., HDMI In).
+Supports power, volume, playback, navigation, and source selection.
 """
 import asyncio
 import socket
@@ -29,9 +29,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async def handle_send_command(call):
         """Handle the send_command service for Oppo UDP-20x."""
         command = call.data.get("command")
-        if command == "select_hdmi_in":
-            await player.async_select_hdmi_in()
-        elif command in player._command_map:
+        if command in player._command_map:
             await player.async_send_custom_command(player._command_map[command])
         elif command:
             await player.async_send_custom_command(command)
@@ -49,16 +47,14 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._is_muted = False
         self._running = True
         self._current_source = None
-        # Внутренний словарь команд Telnet (официальные из документации)
+        # Внутренний словарь команд Telnet (только навигация)
         self._command_map = {
-            "up": "#UPP",
-            "down": "#DWN",
-            "left": "#LFT",
-            "right": "#RGT",
-            "enter": "#ENT",
-            "home": "#HOME",
-            "source_selection": "#SRC",
-            "select_hdmi_in": "select_hdmi_in"
+            "up": "#NUP",
+            "down": "#NDN",
+            "left": "#NLT",
+            "right": "#NRT",
+            "enter": "#SEL",
+            "home": "#HOM"
         }
         # Атрибуты с описаниями для отображения в HA
         self._attributes = {
@@ -67,9 +63,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
             "left": "Move cursor left",
             "right": "Move cursor right",
             "enter": "Select/Enter",
-            "home": "Return to home screen",
-            "source_selection": "Cycle through input sources (e.g., Disc → HDMI In → ARC)",
-            "select_hdmi_in": "Switch directly to HDMI In"
+            "home": "Return to home screen"
         }
         # Список источников для выбора в карточке
         self._source_list = ["Disc", "HDMI In", "ARC: HDMI Out"]
@@ -122,10 +116,12 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     @property
     def source(self):
+        """Return the current source."""
         return self._current_source
 
     @property
     def source_list(self):
+        """Return the list of available sources."""
         return self._source_list
 
     @property
@@ -218,33 +214,33 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     async def async_media_play(self):
         """Play media on Oppo UDP-20x."""
-        if await self._send_command("#PLAY"):
+        if await self._send_command("#PLA"):
             self._state = MediaPlayerState.PLAYING
             self.async_write_ha_state()
 
     async def async_media_stop(self):
         """Stop media on Oppo UDP-20x."""
-        if await self._send_command("#STOP"):
+        if await self._send_command("#STP"):
             self._state = MediaPlayerState.IDLE
             self.async_write_ha_state()
 
     async def async_media_pause(self):
         """Pause media on Oppo UDP-20x."""
-        if await self._send_command("#PAUS"):
+        if await self._send_command("#PAU"):
             self._state = MediaPlayerState.PAUSED
             self.async_write_ha_state()
 
     async def async_media_next_track(self):
         """Skip to next track on Oppo UDP-20x."""
-        await self._send_command("#NEXT")
+        await self._send_command("#NXT")
 
     async def async_media_previous_track(self):
         """Skip to previous track on Oppo UDP-20x."""
-        await self._send_command("#PREV")
+        await self._send_command("#PRE")
 
     async def async_turn_on(self):
         """Turn on the Oppo UDP-20x."""
-        if await self._send_command("#POWER"):
+        if await self._send_command("#POW"):
             self._state = MediaPlayerState.IDLE
             await asyncio.sleep(1)
             await self._update_volume()
@@ -252,7 +248,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     async def async_turn_off(self):
         """Turn off the Oppo UDP-20x."""
-        if await self._send_command("#POWER"):
+        if await self._send_command("#POW"):
             self._state = MediaPlayerState.OFF
             self.async_write_ha_state()
 
@@ -261,15 +257,6 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         if await self._send_command("#MUT"):
             self._is_muted = mute
             self.async_write_ha_state()
-
-    async def async_select_hdmi_in(self):
-        """Switch Oppo UDP-20x to HDMI In source (legacy method)."""
-        if await self._send_command("#SIS 1"):
-            _LOGGER.debug("HDMI In selected with #SIS 1")
-            self._current_source = "HDMI In"
-            self.async_write_ha_state()
-        else:
-            _LOGGER.error("Failed to send #SIS 1")
 
     async def async_select_source(self, source):
         """Select source on Oppo UDP-20x."""
@@ -286,27 +273,27 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     async def async_press_up(self):
         """Press Up button on Oppo UDP-20x."""
-        await self._send_command("#UPP")
+        await self._send_command("#NUP")
 
     async def async_press_down(self):
         """Press Down button on Oppo UDP-20x."""
-        await self._send_command("#DWN")
+        await self._send_command("#NDN")
 
     async def async_press_left(self):
         """Press Left button on Oppo UDP-20x."""
-        await self._send_command("#LFT")
+        await self._send_command("#NLT")
 
     async def async_press_right(self):
         """Press Right button on Oppo UDP-20x."""
-        await self._send_command("#RGT")
+        await self._send_command("#NRT")
 
     async def async_press_enter(self):
         """Press Enter button on Oppo UDP-20x."""
-        await self._send_command("#ENT")
+        await self._send_command("#SEL")
 
     async def async_press_home(self):
         """Press Home button on Oppo UDP-20x."""
-        await self._send_command("#HOME")
+        await self._send_command("#HOM")
 
     async def _update_volume(self):
         """Update the current volume level from Oppo UDP-20x."""

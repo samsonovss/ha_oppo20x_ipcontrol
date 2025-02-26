@@ -13,12 +13,12 @@ from . import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 class OppoTelnetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Oppo UDP-20x Telnet."""
+    """Handle a config flow for Oppo UDP-20x IP Control."""
 
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
-        """Handle the initial step of Oppo UDP-20x Telnet configuration."""
+        """Handle the initial step of Oppo UDP-20x IP Control configuration."""
         errors = {}
         if user_input is not None:
             host = user_input[CONF_HOST]
@@ -38,7 +38,7 @@ class OppoTelnetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     def _test_connection(self, host):
-        """Test Telnet connection to the Oppo UDP-20x device."""
+        """Test IP Control connection to the Oppo UDP-20x device."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(5)  # Устанавливаем тайм-аут 5 секунд
         try:

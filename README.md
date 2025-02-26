@@ -1,6 +1,6 @@
 # Oppo UDP-20x Telnet
 
-Custom Home Assistant integration for controlling Oppo UDP-20x series media players (e.g., UDP-203, UDP-205) via Telnet. Unlike the original UDP-based integration, this version uses Telnet protocol (port 23) for reliable command execution, eliminating the need for a web interface.
+Custom Home Assistant integration for controlling Oppo UDP-20x series media players (e.g., UDP-203, UDP-205) via Telnet.
 
 ## Features
 - **Power Control**: Turn the player on or off.
@@ -46,5 +46,7 @@ Additional attributes displayed in the card:
       "command": "up"
     }
 
-## Supported commands: up, down, left, right, enter, home.
-## 
+## Notes
+- Developed based on the official Oppo UDP-20x Telnet commands from the RS-232 & IP Control Protocol.
+- Source selection supports Disc, HDMI In, and ARC: HDMI Out; additional sources are available in the protocol but not implemented here.
+- Polling occurs every 2 seconds to update power, volume, mute, and playback status; adjust the interval in the code if needed.

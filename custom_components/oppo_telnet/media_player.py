@@ -182,31 +182,39 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
     async def async_volume_up(self):
         """Increase volume for Oppo UDP-20x."""
-        response = await self._send_command("#VOL +", expect_response=True)
+        response = await self._send_command("#VUP", expect_response=True)
         if response and "@OK" in response:
-            # Обновляем громкость из ответа (например, @OK 45)
             try:
                 volume_parts = response.split()
                 if len(volume_parts) > 1 and volume_parts[1].isdigit():
                     self._volume = int(volume_parts[1]) / 100.0
-                _LOGGER.debug(f"Volume increased to {self._volume}")
-                self.async_write_ha_state()
+                    _LOGGER.debug(f"Volume increased to {self._volume}")
+                    self.async_write_ha_state()
+                else:
+                    await self._update_volume()
             except (ValueError, IndexError):
                 _LOGGER.warning(f"Failed to parse volume from response: {response}")
+                await self._update_volume()
+        else:
+            _LOGGER.error(f"Failed to increase volume: {response}")
 
     async def async_volume_down(self):
         """Decrease volume for Oppo UDP-20x."""
-        response = await self._send_command("#VOL -", expect_response=True)
+        response = await self._send_command("#VDN", expect_response=True)
         if response and "@OK" in response:
-            # Обновляем громкость из ответа
             try:
                 volume_parts = response.split()
                 if len(volume_parts) > 1 and volume_parts[1].isdigit():
                     self._volume = int(volume_parts[1]) / 100.0
-                _LOGGER.debug(f"Volume decreased to {self._volume}")
-                self.async_write_ha_state()
+                    _LOGGER.debug(f"Volume decreased to {self._volume}")
+                    self.async_write_ha_state()
+                else:
+                    await self._update_volume()
             except (ValueError, IndexError):
                 _LOGGER.warning(f"Failed to parse volume from response: {response}")
+                await self._update_volume()
+        else:
+            _LOGGER.error(f"Failed to decrease volume: {response}")
 
     async def async_media_play(self):
         """Play media on Oppo UDP-20x."""

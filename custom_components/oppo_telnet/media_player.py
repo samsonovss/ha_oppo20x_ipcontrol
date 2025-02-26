@@ -47,6 +47,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         self._is_muted = False
         self._running = True
         self._current_source = None
+        self._last_power_command = None  # Для отслеживания последней команды питания
         # Внутренний словарь команд Telnet (только навигация)
         self._command_map = {
             "up": "#NUP",
@@ -248,9 +249,9 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Turn on the Oppo UDP-20x."""
         if await self._send_command("#PON"):
             self._state = MediaPlayerState.IDLE
+            self._last_power_command = "on"  # Отмечаем, что включили
             await asyncio.sleep(1)
             await self._update_volume()
-            # Запрос текущего источника при включении
             source_status = await self._send_command("#QIS", expect_response=True)
             if source_status and "@OK" in source_status:
                 try:
@@ -266,6 +267,8 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Turn off the Oppo UDP-20x."""
         if await self._send_command("#POF"):
             self._state = MediaPlayerState.OFF
+            self._last_power_command = "off"  # Отмечаем, что выключили
+            _LOGGER.debug("Oppo turned off with #POF")
             self.async_write_ha_state()
 
     async def async_mute_volume(self, mute):
@@ -332,6 +335,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
         """Poll the Oppo UDP-20x status periodically."""
         while self._running:
             try:
+                # Проверяем состояние питания
                 power_status = await self._send_command("#QPW", expect_response=True)
                 _LOGGER.debug(f"Power status response: {power_status}")
                 if power_status:
@@ -354,7 +358,8 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
                 else:
-                    if self._state != MediaPlayerState.OFF:
+                    # Если ответа нет и последняя команда была выключение, доверяем ей
+                    if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
 
@@ -376,7 +381,7 @@ class OppoTelnetMediaPlayer(MediaPlayerEntity):
 
             except Exception as e:
                 _LOGGER.error(f"Error polling status: {e}")
-                if self._state != MediaPlayerState.OFF:
+                if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
                     self._state = MediaPlayerState.OFF
                     self.async_write_ha_state()
 

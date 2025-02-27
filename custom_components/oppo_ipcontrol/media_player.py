@@ -104,6 +104,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
             "volume_level_oppo": self._volume_oppo
         }
         # Список источников для выбора в карточке
+        self._state_update_pending = False  # Флаг для отслеживания ожидающих обновлений состояния
         self._source_list = ["Disc", "HDMI In", "ARC: HDMI Out"]
         # Соответствие источников и команд #SIS
         self._source_to_command = {
@@ -322,9 +323,12 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
     async def async_turn_on(self):
         """Turn on the Oppo UDP-20x."""
         if await self._send_command("#PON"):
+            # Устанавливаем состояние включения сразу и добавляем задержку,
+            # чтобы дать устройству время стабилизироваться
             self._state = MediaPlayerState.IDLE
             self._last_power_command = "on"
-            await asyncio.sleep(1)
+            _LOGGER.debug("Oppo turned on with #PON, waiting for device to settle")
+            await asyncio.sleep(2)  # Увеличили задержку до 2 секунд для стабильности
             await self._update_volume()
             source_status = await self._send_command("#QIS", expect_response=True)
             if source_status and "@OK" in source_status:
@@ -336,6 +340,8 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
                 except (ValueError, IndexError):
                     _LOGGER.warning(f"Failed to parse source from response: {source_status}")
             self.async_write_ha_state()
+        else:
+            _LOGGER.error("Failed to turn on Oppo with #PON")
 
     async def async_turn_off(self):
         """Turn off the Oppo UDP-20x."""
@@ -348,6 +354,8 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
             _LOGGER.debug("Oppo turned off with #POF, waiting for device to settle")
             await asyncio.sleep(2)  # Увеличили задержку для стабильности
             self.async_write_ha_state()
+        else:
+            _LOGGER.error("Failed to turn off Oppo with #POF")
 
     async def async_mute_volume(self, mute):
         """Mute or unmute the Oppo UDP-20x volume."""
@@ -425,8 +433,9 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
                 
                 if power_status:
                     if "ON" in power_status.upper():
-                        if self._state == MediaPlayerState.OFF:
+                        if self._state == MediaPlayerState.OFF or self._state_update_pending:
                             self._state = MediaPlayerState.IDLE
+                            self._state_update_pending = False
                             await self._update_volume()
                             source_status = await self._send_command("#QIS", expect_response=True)
                             if source_status and "@OK" in source_status:

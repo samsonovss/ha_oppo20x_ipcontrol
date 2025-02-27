@@ -14,7 +14,7 @@ from homeassistant.const import CONF_HOST
 from homeassistant.helpers.entity import DeviceInfo
 import logging
 
-DOMAIN = "oppo_ipcontrol"  # Обновил DOMAIN с "oppo_telnet" на "oppo_ipcontrol"
+DOMAIN = "oppo_ipcontrol" 
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"

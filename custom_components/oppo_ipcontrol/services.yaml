@@ -2,11 +2,10 @@ send_command:
   name: Отправить команду
   description: Отправляет пользовательскую команду на Oppo UDP-20x.
   fields:
-    command:
-      name: Команда
-      description: "Команда для отправки на Oppo UDP-20x"
-      required: true
-      example: "right"
+    preset_command:
+      name: Предопределённая команда
+      description: "Выберите предопределённую команду из списка"
+      required: false
       selector:
         select:
           options:
@@ -24,14 +23,10 @@ send_command:
               value: "home"
           mode: dropdown
           custom_value: true
-send_command:
-  name: Отправить команду
-  description: Отправляет пользовательскую команду на Oppo UDP-20x.
-  fields:
-    command:
-      name: Команда
-      description: "Команда для отправки (up, down, left, right, enter, home)"
-      required: true
+    custom_command:
+      name: Произвольная команда
+      description: "Ввод произвольной команды для отправки (например, #NUP, #NDN)"
+      required: false
       selector:
         text:
           type: text

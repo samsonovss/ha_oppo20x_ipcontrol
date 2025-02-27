@@ -12,8 +12,8 @@ from homeassistant.components.media_player.const import (
 )
 from homeassistant.const import CONF_HOST
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers import entity_platform
 import logging
+import voluptuous as vol
 
 DOMAIN = "oppo_ipcontrol"
 _LOGGER = logging.getLogger(__name__)
@@ -28,25 +28,40 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities([player])
     hass.async_create_task(player.async_poll_status())
     
-    # Регистрация сервиса с схемой
-    platform = entity_platform.async_get_current_platform()
+    # Определение схемы данных для службы с двумя полями
+    service_schema = vol.Schema({
+        vol.Optional("preset_command"): str,
+        vol.Optional("custom_command"): str,
+    })
     
-    # Регистрация сервиса
+    # Регистрация сервиса с описанием параметров
     async def handle_send_command(call):
         """Handle the send_command service for Oppo UDP-20x."""
-        command = call.data.get("command")
-        if command in player._command_map:
-            await player.async_send_custom_command(player._command_map[command])
-        elif command:
-            await player.async_send_custom_command(command)
+        preset_command = call.data.get("preset_command")
+        custom_command = call.data.get("custom_command")
+        
+        # Определяем, какая команда используется
+        if preset_command and preset_command in player._command_map:
+            command_to_send = player._command_map[preset_command]
+            _LOGGER.debug(f"Using preset command: {preset_command} -> {command_to_send}")
+            await player.async_send_custom_command(command_to_send)
+        elif custom_command:
+            # Проверяем, что кастомная команда не пустая
+            if not custom_command.strip():
+                _LOGGER.warning("Custom command is empty")
+                return
+            command_to_send = custom_command.strip()
+            _LOGGER.debug(f"Using custom command: {command_to_send}")
+            await player.async_send_custom_command(command_to_send)
+        else:
+            _LOGGER.warning("No preset or custom command provided for send_command service")
     
-    # Загружаем схему службы из services.yaml
     hass.services.async_register(
-        DOMAIN, 
-        SERVICE_SEND_COMMAND, 
+        DOMAIN,
+        SERVICE_SEND_COMMAND,
         handle_send_command,
+        schema=service_schema
     )
-
 
 class OppoIPControlMediaPlayer(MediaPlayerEntity):
     """Representation of an Oppo UDP-20x IP Control Protocol media player."""
@@ -122,17 +137,17 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
     @property
     def supported_features(self):
         return (
-                MediaPlayerEntityFeature.PLAY
-                | MediaPlayerEntityFeature.STOP
-                | MediaPlayerEntityFeature.PAUSE
-                | MediaPlayerEntityFeature.VOLUME_SET
-                | MediaPlayerEntityFeature.VOLUME_MUTE
-                | MediaPlayerEntityFeature.TURN_ON
-                | MediaPlayerEntityFeature.TURN_OFF
-                | MediaPlayerEntityFeature.NEXT_TRACK
-                | MediaPlayerEntityFeature.PREVIOUS_TRACK
-                | MediaPlayerEntityFeature.VOLUME_STEP
-                | MediaPlayerEntityFeature.SELECT_SOURCE
+            MediaPlayerEntityFeature.PLAY
+            | MediaPlayerEntityFeature.STOP
+            | MediaPlayerEntityFeature.PAUSE
+            | MediaPlayerEntityFeature.VOLUME_SET
+            | MediaPlayerEntityFeature.VOLUME_MUTE
+            | MediaPlayerEntityFeature.TURN_ON
+            | MediaPlayerEntityFeature.TURN_OFF
+            | MediaPlayerEntityFeature.NEXT_TRACK
+            | MediaPlayerEntityFeature.PREVIOUS_TRACK
+            | MediaPlayerEntityFeature.VOLUME_STEP
+            | MediaPlayerEntityFeature.SELECT_SOURCE
         )
 
     @property

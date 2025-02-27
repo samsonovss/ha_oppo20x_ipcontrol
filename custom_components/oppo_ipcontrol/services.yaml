@@ -4,21 +4,16 @@ send_command:
   fields:
     command:
       name: Команда
-      description: >-
-        Команда для отправки на Oppo UDP-20x:
-        
-        - up: Переместить курсор вверх
-        - down: Переместить курсор вниз
-        - left: Переместить курсор влево
-        - right: Переместить курсор вправо
-        - enter: Выбрать/Подтвердить
-        - home: Вернуться на главный экран
+      description: "Команда для отправки на Oppo UDP-20x: up - Вверх, down - Вниз, left - Влево, right - Вправо, enter - Подтвердить, home - Главный экран"
       required: true
       example: "right"
       selector:
-        text:
-          multiline: false
-          type: text
-          suffix: ""
-          prefix: ""
-          autocomplete: "up|down|left|right|enter|hom"
+        select:
+          options:
+            - "up"
+            - "down"
+            - "left"
+            - "right"
+            - "enter"
+            - "home"
+          custom_value: true

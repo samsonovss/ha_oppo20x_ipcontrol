@@ -12,8 +12,8 @@ from homeassistant.components.media_player.const import (
 )
 from homeassistant.const import CONF_HOST
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers import entity_platform
 import logging
-import voluptuous as vol
 
 DOMAIN = "oppo_ipcontrol"
 _LOGGER = logging.getLogger(__name__)
@@ -28,12 +28,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities([player])
     hass.async_create_task(player.async_poll_status())
     
-    # Определение схемы данных для службы
-    service_schema = vol.Schema({
-        vol.Required("command"): str,
-    })
+    # Регистрация сервиса с схемой
+    platform = entity_platform.async_get_current_platform()
     
-    # Регистрация сервиса с описанием параметров
+    # Регистрация сервиса
     async def handle_send_command(call):
         """Handle the send_command service for Oppo UDP-20x."""
         command = call.data.get("command")
@@ -41,15 +39,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             await player.async_send_custom_command(player._command_map[command])
         elif command:
             await player.async_send_custom_command(command)
-        else:
-            _LOGGER.warning("No command provided for send_command service")
     
+    # Загружаем схему службы из services.yaml
     hass.services.async_register(
-        DOMAIN,
-        SERVICE_SEND_COMMAND,
+        DOMAIN, 
+        SERVICE_SEND_COMMAND, 
         handle_send_command,
-        schema=service_schema
     )
+
 
 class OppoIPControlMediaPlayer(MediaPlayerEntity):
     """Representation of an Oppo UDP-20x IP Control Protocol media player."""
@@ -125,17 +122,17 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
     @property
     def supported_features(self):
         return (
-            MediaPlayerEntityFeature.PLAY
-            | MediaPlayerEntityFeature.STOP
-            | MediaPlayerEntityFeature.PAUSE
-            | MediaPlayerEntityFeature.VOLUME_SET
-            | MediaPlayerEntityFeature.VOLUME_MUTE
-            | MediaPlayerEntityFeature.TURN_ON
-            | MediaPlayerEntityFeature.TURN_OFF
-            | MediaPlayerEntityFeature.NEXT_TRACK
-            | MediaPlayerEntityFeature.PREVIOUS_TRACK
-            | MediaPlayerEntityFeature.VOLUME_STEP
-            | MediaPlayerEntityFeature.SELECT_SOURCE
+                MediaPlayerEntityFeature.PLAY
+                | MediaPlayerEntityFeature.STOP
+                | MediaPlayerEntityFeature.PAUSE
+                | MediaPlayerEntityFeature.VOLUME_SET
+                | MediaPlayerEntityFeature.VOLUME_MUTE
+                | MediaPlayerEntityFeature.TURN_ON
+                | MediaPlayerEntityFeature.TURN_OFF
+                | MediaPlayerEntityFeature.NEXT_TRACK
+                | MediaPlayerEntityFeature.PREVIOUS_TRACK
+                | MediaPlayerEntityFeature.VOLUME_STEP
+                | MediaPlayerEntityFeature.SELECT_SOURCE
         )
 
     @property

@@ -1,11 +1,10 @@
 """Oppo UDP-20x IP Control Protocol Media Player.
 
-Custom integration for controlling Oppo UDP-20x series (e.g., UDP-203, UDP-205) via IP Control Protocol.
+Custom integration for controlling Oppo UDP-20x series (e.g., UDP-203, UDP-205) via Telnet.
 Supports power, volume, playback, navigation, and source selection.
 """
 import asyncio
 import socket
-import voluptuous as vol
 from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerDeviceClass
 from homeassistant.components.media_player.const import (
     MediaPlayerEntityFeature,
@@ -15,21 +14,15 @@ from homeassistant.const import CONF_HOST
 from homeassistant.helpers.entity import DeviceInfo
 import logging
 
-DOMAIN = "oppo_ipcontrol"
+DOMAIN = "oppo_telnet"
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"
 
-# Схема для отображения полей entity_id и command в UI
-SERVICE_SEND_COMMAND_SCHEMA = vol.Schema({
-    vol.Required("entity_id"): str,
-    vol.Required("command"): str,
-})
-
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the Oppo UDP-20x IP Control Protocol media player from a config entry."""
+    """Set up the Oppo UDP-20x IP Control media player from a config entry."""
     host = config_entry.data[CONF_HOST]
-    player = OppoIPControlMediaPlayer(host)
+    player = OppoTelnetMediaPlayer(host)
     async_add_entities([player])
     hass.async_create_task(player.async_poll_status())
 
@@ -40,13 +33,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             await player.async_send_custom_command(player._command_map[command])
         elif command:
             await player.async_send_custom_command(command)
+    
+    hass.services.async_register(DOMAIN, SERVICE_SEND_COMMAND, handle_send_command)
 
-    hass.services.async_register(
-        DOMAIN, SERVICE_SEND_COMMAND, handle_send_command, schema=SERVICE_SEND_COMMAND_SCHEMA
-    )
-
-class OppoIPControlMediaPlayer(MediaPlayerEntity):
-    """Representation of an Oppo UDP-20x IP Control Protocol media player."""
+class OppoTelnetMediaPlayer(MediaPlayerEntity):
+    """Representation of an Oppo UDP-20x IP Control media player."""
 
     def __init__(self, host):
         self._host = host
@@ -57,7 +48,8 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
         self._is_muted = False
         self._running = True
         self._current_source = None
-        self._last_power_command = None  # Для стабильного выключения
+        self._last_power_command = None
+        # Внутренний словарь команд IP Control (только навигация)
         self._command_map = {
             "up": "#NUP",
             "down": "#NDN",
@@ -66,6 +58,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
             "enter": "#SEL",
             "home": "#HOM"
         }
+        # Атрибуты с описаниями для отображения в HA
         self._attributes = {
             "up": "Move cursor up",
             "down": "Move cursor down",
@@ -75,12 +68,15 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
             "home": "Return to home screen",
             "volume_level_oppo": self._volume_oppo
         }
+        # Список источников для выбора в карточке
         self._source_list = ["Disc", "HDMI In", "ARC: HDMI Out"]
+        # Соответствие источников и команд #SIS
         self._source_to_command = {
             "Disc": "#SIS 0",
             "HDMI In": "#SIS 1",
             "ARC: HDMI Out": "#SIS 2"
         }
+        # Соответствие ответов #QIS и источников
         self._qis_to_source = {
             "0": "Disc",
             "1": "HDMI In",
@@ -89,7 +85,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
 
     @property
     def unique_id(self):
-        return f"oppo_ipcontrol_{self._host}"
+        return f"oppo_telnet_{self._host}"
 
     @property
     def name(self):
@@ -153,7 +149,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
         return self._attributes
 
     async def _send_command(self, command, expect_response=False):
-        """Send an IP Control Protocol command to the Oppo UDP-20x device."""
+        """Send a IP Control command to the Oppo UDP-20x device."""
         try:
             reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(self._host, self._port),
@@ -177,7 +173,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
             return False
 
     async def async_send_custom_command(self, command):
-        """Send a custom IP Control Protocol command to the Oppo UDP-20x."""
+        """Send a custom IP Control command to the Oppo UDP-20x."""
         await self._send_command(command, expect_response=False)
         _LOGGER.debug(f"Custom command '{command}' sent")
 
@@ -373,9 +369,9 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
                 else:
-                    if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
+                    if self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
-                        _LOGGER.debug("No response from #QPW, assuming Oppo is off based on last command")
+                        _LOGGER.debug("No response from #QPW, assuming Oppo is off")
                         self.async_write_ha_state()
 
                 if self._state != MediaPlayerState.OFF:
@@ -396,9 +392,9 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
 
             except Exception as e:
                 _LOGGER.error(f"Error polling status: {e}")
-                if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
+                if self._state != MediaPlayerState.OFF:
                     self._state = MediaPlayerState.OFF
-                    _LOGGER.debug("Exception caught, assuming Oppo is off based on last command")
+                    _LOGGER.debug("Exception caught, assuming Oppo is off")
                     self.async_write_ha_state()
 
             await asyncio.sleep(2)

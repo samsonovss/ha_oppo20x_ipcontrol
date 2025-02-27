@@ -5,6 +5,7 @@ Supports power, volume, playback, navigation, and source selection.
 """
 import asyncio
 import socket
+import voluptuous as vol  # Добавляем voluptuous для схемы
 from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerDeviceClass
 from homeassistant.components.media_player.const import (
     MediaPlayerEntityFeature,
@@ -14,10 +15,16 @@ from homeassistant.const import CONF_HOST
 from homeassistant.helpers.entity import DeviceInfo
 import logging
 
-DOMAIN = "oppo_ipcontrol"  # Обновил DOMAIN с "oppo_telnet" на "oppo_ipcontrol"
+DOMAIN = "oppo_ipcontrol"
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"
+
+# Схема данных для службы send_command
+SERVICE_SEND_COMMAND_SCHEMA = vol.Schema({
+    vol.Required("entity_id"): str,
+    vol.Required("command"): str,
+})
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the Oppo UDP-20x IP Control Protocol media player from a config entry."""
@@ -34,7 +41,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         elif command:
             await player.async_send_custom_command(command)
     
-    hass.services.async_register(DOMAIN, SERVICE_SEND_COMMAND, handle_send_command)
+    # Регистрируем службу с схемой
+    hass.services.async_register(
+        DOMAIN, SERVICE_SEND_COMMAND, handle_send_command, schema=SERVICE_SEND_COMMAND_SCHEMA
+    )
 
 class OppoIPControlMediaPlayer(MediaPlayerEntity):
     """Representation of an Oppo UDP-20x IP Control Protocol media player."""

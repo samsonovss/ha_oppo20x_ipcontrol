@@ -1,5 +1,5 @@
 {
-  "name": "Oppo UDP-20x Telnet",
+  "name": "Oppo UDP-20x IP Protocol",
   "content_in_root": false,
-  "filename": "oppo_telnet"
+  "filename": "oppo_ipcontrol"
 }

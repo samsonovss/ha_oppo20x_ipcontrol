@@ -30,3 +30,36 @@ send_command:
       selector:
         text:
           type: text
+
+# send_command:
+#   name: Отправить команду
+#   description: Отправляет пользовательскую команду на Oppo UDP-20x.
+#   fields:
+#     preset_command:
+#       name: Предопределённая команда
+#       description: "Выберите команду Навигации из списка"
+#       required: false
+#       selector:
+#         select:
+#           options:
+#             - label: "Вверх"
+#               value: "up"
+#             - label: "Вниз"
+#               value: "down"
+#             - label: "Влево"
+#               value: "left"
+#             - label: "Вправо"
+#               value: "right"
+#             - label: "Подтвердить"
+#               value: "enter"
+#             - label: "Главный экран"
+#               value: "home"
+#           mode: dropdown
+#           custom_value: true
+#     custom_command:
+#       name: Произвольная команда
+#       description: "Ввод произвольной команды для отправки (например, DIM, POW, EJT, без знака #)"
+#       required: false
+#       selector:
+#         text:
+#           type: text

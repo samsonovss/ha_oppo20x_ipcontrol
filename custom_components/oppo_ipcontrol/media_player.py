@@ -9,12 +9,13 @@ from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayer
 from homeassistant.components.media_player.const import (
     MediaPlayerEntityFeature,
     MediaPlayerState,
+    MEDIA_TYPE_MUSIC  # Добавляем для play_media
 )
 from homeassistant.const import CONF_HOST
 from homeassistant.helpers.entity import DeviceInfo
 import logging
 
-DOMAIN = "oppo_ipcontrol"  # Обновил DOMAIN с "oppo_telnet" на "oppo_ipcontrol"
+DOMAIN = "oppo_ipcontrol"
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"
@@ -121,6 +122,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
             | MediaPlayerEntityFeature.PREVIOUS_TRACK
             | MediaPlayerEntityFeature.VOLUME_STEP
             | MediaPlayerEntityFeature.SELECT_SOURCE
+            | MediaPlayerEntityFeature.PLAY_MEDIA  # Добавляем поддержку поля ввода
         )
 
     @property
@@ -147,6 +149,11 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
         """Return the state attributes."""
         self._attributes["volume_level_oppo"] = self._volume_oppo
         return self._attributes
+
+    @property
+    def media_content_type(self):
+        """Content type of current playing media."""
+        return MEDIA_TYPE_MUSIC  # Указываем тип для play_media
 
     async def _send_command(self, command, expect_response=False):
         """Send an IP Control Protocol command to the Oppo UDP-20x device."""
@@ -297,6 +304,18 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
                 _LOGGER.error(f"Failed to send {command} for source {source}")
         else:
             _LOGGER.error(f"Unknown source: {source}")
+
+    async def async_play_media(self, media_type, media_id, **kwargs):
+        """Send a command via the media player card input field."""
+        if media_type == MEDIA_TYPE_MUSIC:
+            # Проверяем, есть ли команда в _command_map, иначе отправляем как есть
+            if media_id in self._command_map:
+                await self.async_send_custom_command(self._command_map[media_id])
+            else:
+                await self.async_send_custom_command(media_id)
+            _LOGGER.debug(f"Sent command via play_media: {media_id}")
+        else:
+            _LOGGER.error(f"Unsupported media_type: {media_type}")
 
     async def async_press_up(self):
         """Press Up button on Oppo UDP-20x."""

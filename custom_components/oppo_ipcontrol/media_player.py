@@ -26,6 +26,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     host = config_entry.data[CONF_HOST]
     player = OppoIPControlMediaPlayer(host)
     async_add_entities([player])
+    
+    # Вызываем начальную проверку состояния перед запуском периодического опроса
+    await player.async_update_source_and_state()
     hass.async_create_task(player.async_poll_status())
     
     # Определение схемы данных для службы с двумя полями
@@ -180,6 +183,38 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
         self._attributes["volume_level_oppo"] = self._volume_oppo
         return self._attributes
 
+    async def async_update_source_and_state(self):
+        """Update the device state and source at startup."""
+        try:
+            # Проверяем состояние питания
+            power_status = await self._send_command("#QPW", expect_response=True)
+            _LOGGER.debug(f"Initial power status response: {power_status}")
+            
+            if power_status and "ON" in power_status.upper():
+                self._state = MediaPlayerState.IDLE
+                # Проверяем текущий источник
+                source_status = await self._send_command("#QIS", expect_response=True)
+                if source_status and "@OK" in source_status:
+                    try:
+                        source_parts = source_status.split()
+                        if len(source_parts) > 1 and source_parts[1] in self._qis_to_source:
+                            self._current_source = self._qis_to_source[source_parts[1]]
+                            _LOGGER.debug(f"Initial source updated to {self._current_source}")
+                    except (ValueError, IndexError):
+                        _LOGGER.warning(f"Failed to parse initial source from response: {source_status}")
+                # Обновляем громкость
+                await self._update_volume()
+            else:
+                self._state = MediaPlayerState.OFF
+                self._current_source = None
+            
+            self.async_write_ha_state()
+        except Exception as e:
+            _LOGGER.error(f"Error updating initial state and source: {e}")
+            self._state = MediaPlayerState.OFF
+            self._current_source = None
+            self.async_write_ha_state()
+
     async def _send_command(self, command, expect_response=False):
         """Send an IP Control Protocol command to the Oppo UDP-20x device."""
         try:
@@ -308,10 +343,10 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
             # Устанавливаем состояние выключения сразу и добавляем небольшую задержку,
             # чтобы избежать ложных срабатываний опроса состояния
             self._state = MediaPlayerState.OFF
+            self._current_source = None
             self._last_power_command = "off"
             _LOGGER.debug("Oppo turned off with #POF, waiting for device to settle")
-            # Увеличиваем задержку, чтобы дать устройству время полностью выключиться
-            await asyncio.sleep(2)  # Увеличили задержку с 1 до 2 секунд
+            await asyncio.sleep(2)  # Увеличили задержку для стабильности
             self.async_write_ha_state()
 
     async def async_mute_volume(self, mute):

@@ -20,10 +20,9 @@ _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"
 
-# Схема данных для службы send_command (command необязательный)
+# Минимальная схема для отображения поля command в UI
 SERVICE_SEND_COMMAND_SCHEMA = vol.Schema({
-    vol.Required("entity_id"): str,
-    vol.Optional("command"): str,  # Сделали command необязательным
+    vol.Required("command"): str,
 })
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -36,14 +35,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async def handle_send_command(call):
         """Handle the send_command service for Oppo UDP-20x."""
         command = call.data.get("command")
-        if command:
-            if command in player._command_map:
-                await player.async_send_custom_command(player._command_map[command])
-            else:
-                await player.async_send_custom_command(command)
-        else:
-            _LOGGER.warning("No command provided in send_command call")
-
+        if command in player._command_map:
+            await player.async_send_custom_command(player._command_map[command])
+        elif command:
+            await player.async_send_custom_command(command)
+    
     hass.services.async_register(
         DOMAIN, SERVICE_SEND_COMMAND, handle_send_command, schema=SERVICE_SEND_COMMAND_SCHEMA
     )
@@ -56,11 +52,12 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
         self._port = 23
         self._state = MediaPlayerState.OFF
         self._volume = 0.0
-        self._volume_oppo = 0
+        self._volume_oppo = 0  # Громкость в формате Oppo (0-100)
         self._is_muted = False
         self._running = True
         self._current_source = None
         self._last_power_command = None
+        # Внутренний словарь команд IP Control Protocol (только навигация)
         self._command_map = {
             "up": "#NUP",
             "down": "#NDN",
@@ -69,6 +66,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
             "enter": "#SEL",
             "home": "#HOM"
         }
+        # Атрибуты с описаниями для отображения в HA
         self._attributes = {
             "up": "Move cursor up",
             "down": "Move cursor down",
@@ -78,12 +76,15 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
             "home": "Return to home screen",
             "volume_level_oppo": self._volume_oppo
         }
+        # Список источников для выбора в карточке
         self._source_list = ["Disc", "HDMI In", "ARC: HDMI Out"]
+        # Соответствие источников и команд #SIS
         self._source_to_command = {
             "Disc": "#SIS 0",
             "HDMI In": "#SIS 1",
             "ARC: HDMI Out": "#SIS 2"
         }
+        # Соответствие ответов #QIS и источников
         self._qis_to_source = {
             "0": "Disc",
             "1": "HDMI In",

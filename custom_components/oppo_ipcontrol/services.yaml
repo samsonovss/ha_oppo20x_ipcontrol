@@ -24,3 +24,14 @@ send_command:
               value: "home"
           mode: dropdown
           custom_value: true
+send_command:
+  name: Отправить команду
+  description: Отправляет пользовательскую команду на Oppo UDP-20x.
+  fields:
+    command:
+      name: Команда
+      description: "Команда для отправки (up, down, left, right, enter, home)"
+      required: true
+      selector:
+        text:
+          type: text

@@ -17,6 +17,7 @@ import logging
 DOMAIN = "oppo_ipcontrol" 
 _LOGGER = logging.getLogger(__name__)
 
+# Регистрация кастомного сервиса
 SERVICE_SEND_COMMAND = "send_command"
 
 async def async_setup_entry(hass, config_entry, async_add_entities):

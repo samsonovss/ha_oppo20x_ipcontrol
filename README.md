@@ -1,6 +1,6 @@
-# Oppo UDP-20x IP Control
+# Oppo UDP-20x IP Control Protocol
 
-Custom Home Assistant integration for controlling Oppo UDP-20x series media players (e.g., UDP-203, UDP-205) via IP Control.
+Custom Home Assistant integration for controlling Oppo UDP-20x series media players (e.g., UDP-203, UDP-205) via IP Control Protocol.
 
 ## Features
 - **Power Control**: Turn the player on or off.
@@ -28,23 +28,30 @@ Additional attributes displayed in the card:
 ## Installation
 1. **Via HACS**:
    - Add this repository as a custom repository in HACS.
-   - Install "Oppo UDP-20x IP Control".
+   - Install "Oppo UDP-20x IP Control Protocol".
 2. **Manual Installation**:
    - Copy the `oppo_ipcontrol` folder to `/config/custom_components/`.
+   - Copy `services.yaml` to `/config/` if you want the custom service UI (optional).
 3. **Add Integration**:
    - Go to "Settings" → "Devices & Services" → "Add Integration".
-   - Search for "Oppo UDP-20x IP Control" and configure with your device's IP (e.g., `192.168.1.124`).
+   - Search for "Oppo UDP-20x IP Control Protocol" and configure with your device's IP (e.g., `192.168.1.124`).
 4. **Restart Home Assistant**.
 
 ## Usage
 - **Media Player Card**: Control power, volume, playback, and select input sources (Disc, HDMI In, ARC: HDMI Out) directly from the card.
-- **Service Calls**: Use the `oppo_ipcontrol.send_command` service to send navigation commands.
-  - Example: Move cursor up:
-    ```json
-    {
-      "entity_id": "media_player.oppo_udp_20x",
-      "command": "up"
-    }
+  - *Screenshot: Add a screenshot of the media player card here*
+
+- **Service Calls**: Use the `oppo_ipcontrol.send_command` service to send navigation or custom commands.
+  - With `services.yaml`, you get a UI with a dropdown for preset commands (Up, Down, Left, Right, Confirm, Home Screen) and a text field for custom commands (e.g., DIM, POW, EJT).
+  - Example in "Developer Tools":
+    ```yaml
+    entity_id: media_player.oppo_udp_20x
+    preset_command: "up"
+  - Or with a custom command":
+    ```yaml
+    entity_id: media_player.oppo_udp_20x
+    custom_command: "POW"
+    
 
 ## Notes
 - Authors: Samsonovs & xAI Assistant

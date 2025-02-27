@@ -47,7 +47,7 @@ Additional attributes displayed in the card:
     }
 
 ## Notes
-- Authors: Samsonovs & AI Assistant
+- Authors: Samsonovs & xAI Assistant
 - Developed based on the official Oppo UDP-20x IP Control Protocol commands from the RS-232 & IP Control Protocol.
 - Source selection supports Disc, HDMI In, and ARC: HDMI Out; additional sources are available in the protocol but not implemented here.
 - Polling occurs every 2 seconds to update power, volume, mute, and playback status; adjust the interval in the code if needed.

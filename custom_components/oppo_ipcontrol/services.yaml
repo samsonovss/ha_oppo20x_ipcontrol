@@ -1,0 +1,11 @@
+send_command:
+  name: Отправить команду
+  description: Отправляет пользовательскую команду на Oppo UDP-20x.
+  fields:
+    command:
+      name: Команда
+      description: Команда для отправки на Oppo UDP-20x (например, #NUP, #NDN, #PON).
+      required: true
+      example: "#HOM"
+      selector:
+        text:

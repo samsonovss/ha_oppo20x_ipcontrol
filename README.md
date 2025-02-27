@@ -15,7 +15,7 @@ The integration provides the following extra state attributes for use in automat
 - `up`: "Move cursor up"
 - `down`: "Move cursor down"
 - `left`: "Move cursor left"
-- `right`: "Move cursor right"
+- `right`: "Move cursor right" 
 - `enter`: "Select/Enter"
 - `home`: "Return to home screen"
 - `volume_level_oppo`: Current volume level in Oppo's native range (0-100)

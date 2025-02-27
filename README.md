@@ -42,7 +42,7 @@ Additional attributes displayed in the card:
   - Example: Move cursor up:
     ```json
     {
-      "entity_id": "media_player.oppo_ipcontrol_192_168_1_124",
+      "entity_id": "media_player.oppo_udp_20x",
       "command": "up"
     }
 

@@ -30,6 +30,38 @@ send_command:
       selector:
         text:
           type: text
+# send_command:
+#   name: Send Command
+#   description: Sends a custom command to the Oppo UDP-20x.
+#   fields:
+#     preset_command:
+#       name: Preset Command
+#       description: "Select a navigation command from the list"
+#       required: false
+#       selector:
+#         select:
+#           options:
+#             - label: "Up"
+#               value: "up"
+#             - label: "Down"
+#               value: "down"
+#             - label: "Left"
+#               value: "left"
+#             - label: "Right"
+#               value: "right"
+#             - label: "Confirm"
+#               value: "enter"
+#             - label: "Home Screen"
+#               value: "home"
+#           mode: dropdown
+#           custom_value: true
+#     custom_command:
+#       name: Custom Command
+#       description: "Enter a custom command to send (e.g., DIM, POW, EJT, without the # sign)"
+#       required: false
+#       selector:
+#         text:
+#           type: text
 
 # send_command:
 #   name: Отправить команду

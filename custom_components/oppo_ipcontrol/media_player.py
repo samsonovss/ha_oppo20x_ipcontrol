@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"
 
-# Схема данных для службы send_command, включающая entity_id и command
+# Схема для службы: entity_id и command обязательны
 SERVICE_SEND_COMMAND_SCHEMA = vol.Schema({
     vol.Required("entity_id"): str,
     vol.Required("command"): str,
@@ -40,7 +40,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             await player.async_send_custom_command(player._command_map[command])
         elif command:
             await player.async_send_custom_command(command)
-    
+
     hass.services.async_register(
         DOMAIN, SERVICE_SEND_COMMAND, handle_send_command, schema=SERVICE_SEND_COMMAND_SCHEMA
     )
@@ -57,8 +57,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
         self._is_muted = False
         self._running = True
         self._current_source = None
-        self._last_power_command = None  # Для отслеживания состояния питания
-        # Внутренний словарь команд IP Control Protocol (только навигация)
+        self._last_power_command = None  # Для стабильного выключения
         self._command_map = {
             "up": "#NUP",
             "down": "#NDN",
@@ -67,7 +66,6 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
             "enter": "#SEL",
             "home": "#HOM"
         }
-        # Атрибуты с описаниями для отображения в HA
         self._attributes = {
             "up": "Move cursor up",
             "down": "Move cursor down",
@@ -77,15 +75,12 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
             "home": "Return to home screen",
             "volume_level_oppo": self._volume_oppo
         }
-        # Список источников для выбора в карточке
         self._source_list = ["Disc", "HDMI In", "ARC: HDMI Out"]
-        # Соответствие источников и команд #SIS
         self._source_to_command = {
             "Disc": "#SIS 0",
             "HDMI In": "#SIS 1",
             "ARC: HDMI Out": "#SIS 2"
         }
-        # Соответствие ответов #QIS и источников
         self._qis_to_source = {
             "0": "Disc",
             "1": "HDMI In",
@@ -378,7 +373,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
                         self._state = MediaPlayerState.OFF
                         self.async_write_ha_state()
                 else:
-                    if self._state != MediaPlayerState.OFF:
+                    if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
                         _LOGGER.debug("No response from #QPW, assuming Oppo is off")
                         self.async_write_ha_state()
@@ -403,7 +398,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
                 _LOGGER.error(f"Error polling status: {e}")
                 if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
                     self._state = MediaPlayerState.OFF
-                    _LOGGER.debug("Exception caught, assuming Oppo is off due to last power command")
+                    _LOGGER.debug("Exception caught, assuming Oppo is off")
                     self.async_write_ha_state()
 
             await asyncio.sleep(2)

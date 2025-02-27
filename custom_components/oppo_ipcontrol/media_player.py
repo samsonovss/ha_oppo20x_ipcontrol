@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"
 
-# Схема для службы: entity_id и command обязательны
+# Схема для отображения полей entity_id и command в UI
 SERVICE_SEND_COMMAND_SCHEMA = vol.Schema({
     vol.Required("entity_id"): str,
     vol.Required("command"): str,
@@ -375,7 +375,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
                 else:
                     if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
-                        _LOGGER.debug("No response from #QPW, assuming Oppo is off")
+                        _LOGGER.debug("No response from #QPW, assuming Oppo is off based on last command")
                         self.async_write_ha_state()
 
                 if self._state != MediaPlayerState.OFF:
@@ -398,7 +398,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
                 _LOGGER.error(f"Error polling status: {e}")
                 if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
                     self._state = MediaPlayerState.OFF
-                    _LOGGER.debug("Exception caught, assuming Oppo is off")
+                    _LOGGER.debug("Exception caught, assuming Oppo is off based on last command")
                     self.async_write_ha_state()
 
             await asyncio.sleep(2)

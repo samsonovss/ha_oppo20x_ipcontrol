@@ -18,8 +18,8 @@ import voluptuous as vol
 DOMAIN = "oppo_ipcontrol"
 _LOGGER = logging.getLogger(__name__)
 
-# Новая регистрация кастомного сервиса
-SERVICE_EXECUTE_COMMAND = "execute_oppo_command"
+# Регистрация кастомного сервиса
+SERVICE_SEND_COMMAND = "send_command"
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the Oppo UDP-20x IP Control Protocol media player from a config entry."""
@@ -28,26 +28,26 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities([player])
     hass.async_create_task(player.async_poll_status())
     
-    # Регистрация новой службы с описанием параметров
-    async def handle_execute_oppo_command(call):
-        """Handle the execute_oppo_command service for Oppo UDP-20x."""
-        command = call.data.get("command")
-        if command:
-            await player.async_send_custom_command(command)
-            _LOGGER.debug(f"Executed custom command '{command}'")
-        else:
-            _LOGGER.warning("No command provided for execute_oppo_command service")
-
     # Определение схемы данных для службы
     service_schema = vol.Schema({
         vol.Required("command"): str,
     })
-
-    # Регистрация службы с явным указанием схемы
+    
+    # Регистрация сервиса с описанием параметров
+    async def handle_send_command(call):
+        """Handle the send_command service for Oppo UDP-20x."""
+        command = call.data.get("command")
+        if command in player._command_map:
+            await player.async_send_custom_command(player._command_map[command])
+        elif command:
+            await player.async_send_custom_command(command)
+        else:
+            _LOGGER.warning("No command provided for send_command service")
+    
     hass.services.async_register(
         DOMAIN,
-        SERVICE_EXECUTE_COMMAND,
-        handle_execute_oppo_command,
+        SERVICE_SEND_COMMAND,
+        handle_send_command,
         schema=service_schema
     )
 
@@ -305,7 +305,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
         if source in self._source_to_command:
             command = self._source_to_command[source]
             if await self._send_command(command):
-                _Logger.debug(f"Source switched to {source} with {command}")
+                _LOGGER.debug(f"Source switched to {source} with {command}")
                 self._current_source = source
                 self.async_write_ha_state()
             else:

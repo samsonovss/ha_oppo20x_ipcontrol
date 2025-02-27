@@ -50,7 +50,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             if not custom_command.strip():
                 _LOGGER.warning("Custom command is empty")
                 return
+            
+            # Добавляем #, если оно отсутствует в начале команды
             command_to_send = custom_command.strip()
+            if not command_to_send.startswith("#"):
+                command_to_send = f"#{command_to_send}"
+            
             _LOGGER.debug(f"Using custom command: {command_to_send}")
             await player.async_send_custom_command(command_to_send)
         else:

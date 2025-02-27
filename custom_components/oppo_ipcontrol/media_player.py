@@ -20,8 +20,9 @@ _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"
 
-# Минимальная схема для отображения поля command в UI
+# Схема данных для службы send_command, включающая entity_id и command
 SERVICE_SEND_COMMAND_SCHEMA = vol.Schema({
+    vol.Required("entity_id"): str,
     vol.Required("command"): str,
 })
 
@@ -56,7 +57,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
         self._is_muted = False
         self._running = True
         self._current_source = None
-        self._last_power_command = None
+        self._last_power_command = None  # Для отслеживания состояния питания
         # Внутренний словарь команд IP Control Protocol (только навигация)
         self._command_map = {
             "up": "#NUP",
@@ -400,9 +401,9 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
 
             except Exception as e:
                 _LOGGER.error(f"Error polling status: {e}")
-                if self._state != MediaPlayerState.OFF:
+                if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
                     self._state = MediaPlayerState.OFF
-                    _LOGGER.debug("Exception caught, assuming Oppo is off")
+                    _LOGGER.debug("Exception caught, assuming Oppo is off due to last power command")
                     self.async_write_ha_state()
 
             await asyncio.sleep(2)

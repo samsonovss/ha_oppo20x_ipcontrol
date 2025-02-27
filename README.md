@@ -51,7 +51,7 @@ Additional attributes displayed in the card:
     ```yaml
     entity_id: media_player.oppo_udp_20x
     custom_command: "POW"
-- ![Media Player Card Screenshot](screenshots/media_player_card_serv.png)
+- ![Media Player Card Screenshot](screenshots/media_player_card_service.png)
 
 ## Notes
 - Authors: Samsonovs & xAI Assistant

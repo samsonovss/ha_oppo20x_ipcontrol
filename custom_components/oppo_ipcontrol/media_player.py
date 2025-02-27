@@ -397,67 +397,69 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
         else:
             _LOGGER.debug("No valid volume response, skipping update")
 
-    async def async_poll_status(self):
-        """Poll the Oppo UDP-20x status periodically."""
-        while self._running:
-            try:
-                power_status = await self._send_command("#QPW", expect_response=True)
-                _LOGGER.debug(f"Power status response: {power_status}")
-                
-                if power_status:
-                    if "ON" in power_status.upper():
-                        if self._state == MediaPlayerState.OFF or self._state_update_pending:
-                            self._state = MediaPlayerState.IDLE
-                            self._state_update_pending = False
-                            await self._update_volume()
-                            source_status = await self._send_command("#QIS", expect_response=True)
-                            if source_status and "@OK" in source_status:
-                                try:
-                                    source_parts = source_status.split()
-                                    if len(source_parts) > 1 and source_parts[1] in self._qis_to_source:
-                                        self._current_source = self._qis_to_source[source_parts[1]]
-                                        _LOGGER.debug(f"Current source updated to {self._current_source}")
-                                except (ValueError, IndexError):
-                                    _LOGGER.warning(f"Failed to parse source from response: {source_status}")
-                            self.async_write_ha_state()
-                    elif "OFF" in power_status.upper():
-                        if self._state != MediaPlayerState.OFF:
-                            self._state = MediaPlayerState.OFF
-                            self._current_source = None
-                            _LOGGER.debug("Oppo confirmed as OFF")
-                            self.async_write_ha_state()
-                else:
-                    if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
+async def async_poll_status(self):
+    """Poll the Oppo UDP-20x status periodically."""
+    while self._running:
+        try:
+            power_status = await self._send_command("#QPW", expect_response=True)
+            _LOGGER.debug(f"Power status response: {power_status}")
+            
+            if power_status:
+                if "ON" in power_status.upper():
+                    if self._state == MediaPlayerState.OFF or self._state_update_pending:
+                        self._state = MediaPlayerState.IDLE
+                        self._state_update_pending = False
+                        await self._update_volume()
+                        source_status = await self._send_command("#QIS", expect_response=True)
+                        if source_status and "@OK" in source_status:
+                            try:
+                                source_parts = source_status.split()
+                                if len(source_parts) > 1 and source_parts[1] in self._qis_to_source:
+                                    self._current_source = self._qis_to_source[source_parts[1]]
+                                    _LOGGER.debug(f"Current source updated to {self._current_source}")
+                            except (ValueError, IndexError):
+                                _LOGGER.warning(f"Failed to parse source from response: {source_status}")
+                        self.async_write_ha_state()
+                elif "OFF" in power_status.upper():
+                    if self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
                         self._current_source = None
-                        _LOGGER.debug("No response from #QPW, assuming Oppo is off based on last command")
+                        _LOGGER.debug("Oppo confirmed as OFF")
                         self.async_write_ha_state()
-
+            else:
+                # Если нет ответа, считаем устройство выключенным независимо от последней команды
                 if self._state != MediaPlayerState.OFF:
-                    await self._update_volume()
-                    play_status = await self._send_command("#QPL", expect_response=True)
-                    _LOGGER.debug(f"Play status response: {play_status}")
-                    if play_status and "@OK" in play_status:
-                        status = play_status.split()[-1].lower()
-                        if "play" in status and self._state != MediaPlayerState.PLAYING:
-                            self._state = MediaPlayerState.PLAYING
-                            self.async_write_ha_state()
-                        elif "pause" in status and self._state != MediaPlayerState.PAUSED:
-                            self._state = MediaPlayerState.PAUSED
-                            self.async_write_ha_state()
-                        elif "stop" in status and self._state != MediaPlayerState.IDLE:
-                            self._state = MediaPlayerState.IDLE
-                            self.async_write_ha_state()
-
-            except Exception as e:
-                _LOGGER.error(f"Error polling status: {e}")
-                if self._last_power_command == "off" and self._state != MediaPlayerState.OFF:
                     self._state = MediaPlayerState.OFF
                     self._current_source = None
-                    _LOGGER.debug("Exception caught, assuming Oppo is off based on last command")
+                    _LOGGER.debug("No response from #QPW, assuming Oppo is off (no power or standby)")
                     self.async_write_ha_state()
 
-            await asyncio.sleep(2)
+            if self._state != MediaPlayerState.OFF:
+                await self._update_volume()
+                play_status = await self._send_command("#QPL", expect_response=True)
+                _LOGGER.debug(f"Play status response: {play_status}")
+                if play_status and "@OK" in play_status:
+                    status = play_status.split()[-1].lower()
+                    if "play" in status and self._state != MediaPlayerState.PLAYING:
+                        self._state = MediaPlayerState.PLAYING
+                        self.async_write_ha_state()
+                    elif "pause" in status and self._state != MediaPlayerState.PAUSED:
+                        self._state = MediaPlayerState.PAUSED
+                        self.async_write_ha_state()
+                    elif "stop" in status and self._state != MediaPlayerState.IDLE:
+                        self._state = MediaPlayerState.IDLE
+                        self.async_write_ha_state()
+
+        except Exception as e:
+            _LOGGER.error(f"Error polling status: {e}")
+            # При любом исключении (тайм-аут, ошибка сети) считаем устройство выключенным
+            if self._state != MediaPlayerState.OFF:
+                self._state = MediaPlayerState.OFF
+                self._current_source = None
+                _LOGGER.debug("Exception caught, assuming Oppo is off (no power or network issue)")
+                self.async_write_ha_state()
+
+        await asyncio.sleep(2)
 
     async def async_will_remove_from_hass(self):
         """Clean up when Oppo UDP-20x entity is removed."""

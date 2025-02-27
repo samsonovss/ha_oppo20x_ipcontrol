@@ -8,5 +8,4 @@
   "codeowners": ["@samsonovss"],
   "version": "1.0.0",
   "iot_class": "local_push",
-  "logo": "icon.svg"
 }

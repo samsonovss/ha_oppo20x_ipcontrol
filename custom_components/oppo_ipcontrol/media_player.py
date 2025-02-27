@@ -305,9 +305,13 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
     async def async_turn_off(self):
         """Turn off the Oppo UDP-20x."""
         if await self._send_command("#POF"):
+            # Устанавливаем состояние выключения сразу и добавляем небольшую задержку,
+            # чтобы избежать ложных срабатываний опроса состояния
             self._state = MediaPlayerState.OFF
             self._last_power_command = "off"
-            _LOGGER.debug("Oppo turned off with #POF")
+            _LOGGER.debug("Oppo turned off with #POF, waiting for device to settle")
+            # Увеличиваем задержку, чтобы дать устройству время полностью выключиться
+            await asyncio.sleep(2)  # Увеличили задержку с 1 до 2 секунд
             self.async_write_ha_state()
 
     async def async_mute_volume(self, mute):
@@ -380,8 +384,10 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
         """Poll the Oppo UDP-20x status periodically."""
         while self._running:
             try:
+                # Проверяем состояние питания устройства
                 power_status = await self._send_command("#QPW", expect_response=True)
                 _LOGGER.debug(f"Power status response: {power_status}")
+                
                 if power_status:
                     if "ON" in power_status.upper():
                         if self._state == MediaPlayerState.OFF:
@@ -397,12 +403,18 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
                                 except (ValueError, IndexError):
                                     _LOGGER.warning(f"Failed to parse source from response: {source_status}")
                             self.async_write_ha_state()
-                    elif "OFF" in power_status.upper() and self._state != MediaPlayerState.OFF:
-                        self._state = MediaPlayerState.OFF
-                        self.async_write_ha_state()
+                    elif "OFF" in power_status.upper():
+                        # Если устройство выключено, не меняем состояние, если оно уже OFF
+                        if self._state != MediaPlayerState.OFF:
+                            self._state = MediaPlayerState.OFF
+                            self._current_source = None  # Сбрасываем источник при выключении
+                            _LOGGER.debug("Oppo confirmed as OFF")
+                            self.async_write_ha_state()
                 else:
+                    # Если нет ответа, считаем, что устройство выключено
                     if self._state != MediaPlayerState.OFF:
                         self._state = MediaPlayerState.OFF
+                        self._current_source = None
                         _LOGGER.debug("No response from #QPW, assuming Oppo is off")
                         self.async_write_ha_state()
 
@@ -426,6 +438,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
                 _LOGGER.error(f"Error polling status: {e}")
                 if self._state != MediaPlayerState.OFF:
                     self._state = MediaPlayerState.OFF
+                    self._current_source = None
                     _LOGGER.debug("Exception caught, assuming Oppo is off")
                     self.async_write_ha_state()
 

@@ -26,7 +26,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     player = OppoIPControlMediaPlayer(host)
     async_add_entities([player])
     hass.async_create_task(player.async_poll_status())
-
+    
+    # Регистрация сервиса
     async def handle_send_command(call):
         """Handle the send_command service for Oppo UDP-20x."""
         command = call.data.get("command")

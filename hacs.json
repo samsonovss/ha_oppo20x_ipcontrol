@@ -1,6 +1,5 @@
 {
   "name": "Oppo UDP-20x IP Control",
   "content_in_root": false,
-  "filename": "oppo_ipcontrol",
   "domains": ["media_player"]
 }

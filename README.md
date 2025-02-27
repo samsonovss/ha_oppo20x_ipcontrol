@@ -39,7 +39,7 @@ Additional attributes displayed in the card:
 
 ## Usage
 - **Media Player Card**: Control power, volume, playback, and select input sources (Disc, HDMI In, ARC: HDMI Out) directly from the card.
-  - ![Media Player Card Screenshot](screenshots/1.png)
+  - ![Media Player Card Screenshot](screenshots/media_player_card.png)
 
 - **Service Calls**: Use the `oppo_ipcontrol.send_command` service to send navigation or custom commands.
   - With `services.yaml`, you get a UI with a dropdown for preset commands (Up, Down, Left, Right, Confirm, Home Screen) and a text field for custom commands (e.g., DIM, POW, EJT).
@@ -51,7 +51,7 @@ Additional attributes displayed in the card:
     ```yaml
     entity_id: media_player.oppo_udp_20x
     custom_command: "POW"
-    
+- ![Media Player Card Screenshot](screenshots/media_player_card_serv.png)
 
 ## Notes
 - Authors: Samsonovs & xAI Assistant

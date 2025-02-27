@@ -4,7 +4,7 @@ send_command:
   fields:
     preset_command:
       name: Предопределённая команда
-      description: "Выберите предопределённую команду из списка"
+      description: "Выберите команду Навигации из списка"
       required: false
       selector:
         select:
@@ -25,7 +25,7 @@ send_command:
           custom_value: true
     custom_command:
       name: Произвольная команда
-      description: "Ввод произвольной команды для отправки (например, #NUP, #NDN)"
+      description: "Ввод произвольной команды для отправки (например, DIM, POW, EJT, без знака #)"
       required: false
       selector:
         text:

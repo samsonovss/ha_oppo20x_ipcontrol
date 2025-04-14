@@ -39,7 +39,7 @@ Additional attributes displayed in the card:
 4. **Restart Home Assistant**.
 
 ## Usage
-- **Media Player Card**: Control power, volume, playback, and select input sources (Disc, HDMI In, ARC: HDMI Out) directly from the card.
+- **Media Player Card**: Control power, volume, playback, and select input sources (Disc, HDMI In, ARC: HDMI Out)
 ![Media Player Card Screenshot](screenshots/media_player_card.png)
 
 - **Service Calls**: Use the `oppo_ipcontrol.send_command` service to send navigation or custom commands.

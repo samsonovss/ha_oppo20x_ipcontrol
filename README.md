@@ -35,7 +35,7 @@ Additional attributes displayed in the card:
    - Copy `services.yaml` to `/config/` if you want the custom service UI (optional).
 3. **Add Integration**:
    - Go to "Settings" → "Devices & Services" → "Add Integration".
-   - Search for "Oppo UDP-20x IP Control Protocol" and configure with your device's IP (e.g., `192.168.1.124`).
+   - Search for "Oppo UDP-20x IP Control Protocol" and configure with your device's IP (e.g., `192.168.1.XXX`).
 4. **Restart Home Assistant**.
 
 ## Usage

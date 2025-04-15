@@ -55,7 +55,7 @@ Additional attributes displayed in the card:
 ![Media Player Card Screenshot](screenshots/media_player_card_service.png)
 
 ## Notes
-- Developed based on the official Oppo UDP-20x IP Control Protocol commands from the RS-232 & IP Control Protocol.
+- Developed based on the official Oppo UDP-20x [IP Control Protocol commands from the RS-232 & IP Control Protocol.](OPPO_UDP-20X_RS-232_and_IP_Control_Protocol.pdf)
 - Source selection supports Disc, HDMI In, and ARC: HDMI Out; additional sources are available in the protocol but not implemented here.
 
 ## Authors

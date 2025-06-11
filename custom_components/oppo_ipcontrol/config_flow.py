@@ -43,6 +43,6 @@ class OppoTelnetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         sock.settimeout(5)  # Устанавливаем тайм-аут 5 секунд
         try:
             sock.connect((host, 23))
-            # Просто проверяем, что соединение установлено, без ожидания ответа
+            #  Поверяем, что соединение установлено, без ожидания ответа
         finally:
             sock.close()

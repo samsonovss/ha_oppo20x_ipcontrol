@@ -25,7 +25,8 @@ SERVICE_SEND_COMMAND = "send_command"
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the Oppo UDP-20x IP Control Protocol media player from a config entry."""
     host = config_entry.options.get(CONF_HOST, config_entry.data[CONF_HOST])
-    player = OppoIPControlMediaPlayer(host)
+    unique_id = f"oppo_ipcontrol_{config_entry.data[CONF_HOST]}"
+    player = OppoIPControlMediaPlayer(host, unique_id)
     async_add_entities([player])
 
     # Вызываем начальную проверку состояния перед запуском периодического опроса
@@ -76,8 +77,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class OppoIPControlMediaPlayer(MediaPlayerEntity):
     """Representation of an Oppo UDP-20x IP Control Protocol media player."""
 
-    def __init__(self, host):
+    def __init__(self, host, unique_id):
         self._host = host
+        self._unique_id = unique_id
         self._port = 23
         self._state = MediaPlayerState.OFF
         self._volume = 0.0
@@ -123,7 +125,7 @@ class OppoIPControlMediaPlayer(MediaPlayerEntity):
 
     @property
     def unique_id(self):
-        return f"oppo_ipcontrol_{self._host}"
+        return self._unique_id
 
     @property
     def name(self):

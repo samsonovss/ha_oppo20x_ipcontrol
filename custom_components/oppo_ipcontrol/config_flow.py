@@ -64,7 +64,6 @@ class OppoTelnetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 self.hass.config_entries.async_update_entry(
                     entry,
-                    data={**entry.data, CONF_HOST: host},
                     options={**entry.options, CONF_HOST: host},
                     title=f"Oppo UDP-20x {host}",
                 )

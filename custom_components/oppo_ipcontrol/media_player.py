@@ -24,7 +24,7 @@ SERVICE_SEND_COMMAND = "send_command"
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the Oppo UDP-20x IP Control Protocol media player from a config entry."""
-    host = config_entry.data[CONF_HOST]
+    host = config_entry.options.get(CONF_HOST, config_entry.data[CONF_HOST])
     player = OppoIPControlMediaPlayer(host)
     async_add_entities([player])
 

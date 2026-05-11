@@ -1,0 +1,40 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Oppo UDP-20x IP Control",
+        "description": "Enter the IP address of your Oppo UDP-20x player.",
+        "data": {
+          "host": "IP address"
+        }
+      },
+      "reconfigure": {
+        "title": "Update Oppo UDP-20x IP address",
+        "description": "Enter the new IP address of your Oppo UDP-20x player.",
+        "data": {
+          "host": "IP address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the Oppo player"
+    },
+    "abort": {
+      "reconfigure_successful": "Oppo IP address updated"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Oppo UDP-20x IP address",
+        "description": "Update the IP address used by this integration.",
+        "data": {
+          "host": "IP address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the Oppo player"
+    }
+  }
+}

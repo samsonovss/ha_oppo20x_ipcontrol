@@ -5,7 +5,7 @@ Custom component for controlling Oppo UDP-20x series media players (e.g., UDP-20
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
 
 DOMAIN = "oppo_ipcontrol" 
@@ -20,7 +20,10 @@ async def async_setup(hass: HomeAssistant, config: dict):
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up Oppo UDP-20x IP Control from a config entry."""
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = entry.data
+    hass.data[DOMAIN][entry.entry_id] = {
+        **entry.data,
+        CONF_HOST: entry.options.get(CONF_HOST, entry.data.get(CONF_HOST)),
+    }
 
     async def on_hass_stop(event):
         """Clean up when HA stops for Oppo UDP-20x IP Control."""
@@ -29,6 +32,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     entry.async_on_unload(
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
     )
+
+    async def async_update_options(hass: HomeAssistant, updated_entry: ConfigEntry):
+        """Reload the entry when options are updated."""
+        await hass.config_entries.async_reload(updated_entry.entry_id)
+
+    entry.async_on_unload(entry.add_update_listener(async_update_options))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

@@ -123,4 +123,4 @@ Additional media player attributes include:
 
 ## Authors
 
-Created by [@samsonovss](https://t.me/samsonovss) with help from **Тень**, an OpenClaw personal AI agent.
+Created by [@samsonovss](https://t.me/samsonovss) with help from **Shade**, an OpenClaw personal AI agent.

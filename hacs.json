@@ -1,5 +1,4 @@
 {
   "name": "Oppo UDP-20x IP Control",
-  "content_in_root": false,
-  "domains": ["media_player"]
+  "content_in_root": false
 }

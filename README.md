@@ -121,6 +121,18 @@ Additional media player attributes include:
 - Source selection currently supports Disc, HDMI In, and ARC: HDMI Out.
 - The protocol exposes more commands than this integration currently implements.
 
+## Support
+
+If this integration is useful to you, you can support its development:
+
+- PayPal: `samsonov@hotmail.com`
+- Telegram: https://t.me/samsonovss
+- Bitcoin (BTC): `bc1q3cza0kasutzes4hfddxuclmd9ghn5v7zw2nr5c`
+
+Please send Bitcoin (BTC) only to the address above. Do not send USDT, ETH, BNB, TRX, or other tokens to this address.
+
+Thank you for supporting the integration.
+
 ## Authors
 
 Created by [@samsonovss](https://t.me/samsonovss) with help from **Shade**, an OpenClaw personal AI agent.

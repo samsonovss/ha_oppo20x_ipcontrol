@@ -31,8 +31,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     # Вызываем начальную проверку состояния перед запуском периодического опроса
     await player.async_update_source_and_state()
-    hass.async_create_task(player.async_poll_status())
-
+    config_entry.async_create_background_task(hass, player.async_poll_status(), name="oppo_poll_status")
     # Определение схемы данных для службы с двумя полями
     service_schema = vol.Schema({
         vol.Optional("preset_command"): str,
